@@ -8,40 +8,22 @@
   var PALETTE = ['#8b5cf6', '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#f97316', '#6366f1', '#84cc16', '#14b8a6', '#d946ef'];
 
   var I = {
-    zh: {
       'nav.home': '首页', 'nav.browse': '浏览', 'nav.study': '学习', 'nav.search': '搜索', 'search.ph': '搜索单词、释义、例句', loading: '加载中…',
       'lock.title': '输入密码', 'lock.sub': '卡片数据已加密，每台设备只需输入一次。', 'lock.go': '解锁', 'lock.bad': '密码不对', 'lock.out': '退出（清除本机密码）',
       wod: '今日一词', 'wod.study': '开始学习', 'wod.detail': '查看详情',
       'k.total': '卡片总数', 'k.week': '本周新增', 'k.streak': '连续学习天数', 'k.due': '待复习',
       recent: '最近添加', all: '全部', 'due.title': '该复习了', 'due.n': '张卡片到期', 'due.none': '今天没有到期的卡片', 'due.go': '去复习',
-      kinds: '类型', tags: '标签', sources: '来源', months: '按月浏览', 'month.n': '本月新增', 'cal.hint': '点日期看当天新增的卡片',
+      kinds: '类型', tags: '标签', months: '按月浏览', 'month.n': '本月新增', 'cal.hint': '点日期看当天新增的卡片',
       word: '单词', phrase: '短语', idiom: '习语', usage: '用法',
       'v.title': '仅词条', 'v.one': '一句话', 'v.full': '完整', starred: '难词', 'cards.n': '张', clear: '清除筛选', 'empty.list': '没有符合条件的卡片',
       'f.usage': '用法', 'f.examples': '例句', 'f.synonyms': '近义词', 'f.antonyms': '反义词', 'f.collocations': '常见搭配', 'f.context': '我遇到它的地方',
-      'f.note': '笔记', 'f.source': '来源', 'f.en': '英文释义', added: '添加于', back: '返回',
+      'f.note': '笔记', 'f.en': '英文释义', added: '添加于', back: '返回',
       's.all': '全部卡片', 's.due': '只看到期', 's.star': '只看难词', shuffle: '打乱', 'flip.hint': '点击或按空格翻面', 'g0': '不认识', 'g1': '模糊', 'g2': '认识',
       'g0s': '今天再看', 'g1s': '明天再看', 'g2s': '间隔加长', keys: '← → 翻页 · 空格翻面 · 1 2 3 评分', 'done.title': '这一组学完了', 'done.sub': '本次评分',
       'done.again': '再来一遍', exportc: '导出 CSV', exporta: '导出 Anki', copied: '已导出', 'notfound': '没有找到这张卡片', 'empty.all': '还没有卡片。跟 ChatGPT 说一个词，它会帮你记下来。',
       accent: '发音'
-    },
-    en: {
-      'nav.home': 'Home', 'nav.browse': 'Browse', 'nav.study': 'Study', 'nav.search': 'Search', 'search.ph': 'Search words, meanings, examples', loading: 'Loading…',
-      'lock.title': 'Enter password', 'lock.sub': 'Cards are encrypted. Each device asks only once.', 'lock.go': 'Unlock', 'lock.bad': 'Wrong password', 'lock.out': 'Sign out (forget password here)',
-      wod: 'Word of the day', 'wod.study': 'Start studying', 'wod.detail': 'Details',
-      'k.total': 'Cards', 'k.week': 'Added this week', 'k.streak': 'Day streak', 'k.due': 'Due for review',
-      recent: 'Recently added', all: 'All', 'due.title': 'Review time', 'due.n': 'cards are due', 'due.none': 'Nothing due today', 'due.go': 'Review',
-      kinds: 'Kinds', tags: 'Tags', sources: 'Sources', months: 'By month', 'month.n': 'added this month', 'cal.hint': 'Tap a day to see the cards added',
-      word: 'Word', phrase: 'Phrase', idiom: 'Idiom', usage: 'Usage',
-      'v.title': 'Terms', 'v.one': 'One line', 'v.full': 'Full', starred: 'Hard', 'cards.n': 'cards', clear: 'Clear filters', 'empty.list': 'No cards match',
-      'f.usage': 'Usage', 'f.examples': 'Examples', 'f.synonyms': 'Synonyms', 'f.antonyms': 'Antonyms', 'f.collocations': 'Collocations', 'f.context': 'Where I met it',
-      'f.note': 'Note', 'f.source': 'Source', 'f.en': 'Definition', added: 'Added', back: 'Back',
-      's.all': 'All cards', 's.due': 'Due only', 's.star': 'Hard only', shuffle: 'Shuffle', 'flip.hint': 'Tap or press Space to flip', 'g0': 'Forgot', 'g1': 'Unsure', 'g2': 'Knew it',
-      'g0s': 'again today', 'g1s': 'tomorrow', 'g2s': 'longer gap', keys: '← → move · Space flip · 1 2 3 grade', 'done.title': 'Deck finished', 'done.sub': 'This session',
-      'done.again': 'Study again', exportc: 'Export CSV', exporta: 'Export Anki', copied: 'Exported', 'notfound': 'Card not found', 'empty.all': 'No cards yet. Tell ChatGPT a word and it will save it here.',
-      accent: 'Accent'
-    }
   };
-  function t(k) { return (I[R.dataset.lang] || I.zh)[k] || I.zh[k] || k; }
+  function t(k) { return I[k] || k; }
   function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
   function store(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
   function jget(k, d) { try { var v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? d : v; } catch (e) { return d; } }
@@ -61,7 +43,7 @@
     clearTimeout(el._h); el._h = setTimeout(function () { el.classList.remove('on'); }, 1800);
   }
 
-  /* ---- scheme / view / language (same pattern as hackernews hn2.js) ---- */
+  /* ---- scheme / view (same pattern as hackernews hn2.js) ---- */
   window.setScheme = function () {
     R.dataset.scheme = R.dataset.scheme === 'dark' ? 'light' : 'dark';
     store('ec-scheme', R.dataset.scheme);
@@ -69,7 +51,6 @@
   function syncSet() {
     $$('[data-set]').forEach(function (b) { var kv = b.dataset.set.split(':'); b.classList.toggle('on', R.dataset[kv[0]] === kv[1]); });
     $$('[data-i]').forEach(function (n) { n.textContent = t(n.dataset.i); });
-    R.lang = R.dataset.lang === 'en' ? 'en' : 'zh';
   }
   document.addEventListener('click', function (ev) {
     var b = ev.target.closest && ev.target.closest('[data-set]');
@@ -77,7 +58,7 @@
     var kv = b.dataset.set.split(':');
     R.dataset[kv[0]] = kv[1];
     store('ec-' + kv[0], kv[1]);
-    if (kv[0] === 'lang') route(); else syncSet();
+    syncSet();
   });
 
   /* ---- decryption ---- */
@@ -206,12 +187,9 @@
     add('f.collocations', list(c.collocations).length ? '<div class="chips">' + list(c.collocations).map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div>' : '');
     add('f.synonyms', list(c.synonyms).length ? '<div class="chips">' + list(c.synonyms).map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div>' : '');
     add('f.antonyms', list(c.antonyms).length ? '<div class="chips">' + list(c.antonyms).map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div>' : '');
-    add('f.context', c.context ? '<div class="ctx">“' + esc(c.context) + '”</div>' : '');
+    var src = c.source ? (c.source_url ? '<a class="more" href="' + esc(c.source_url) + '" target="_blank" rel="noopener">' + esc(c.source) + '</a>' : esc(c.source)) : '';
+    add('f.context', (c.context ? '<div class="ctx">“' + esc(c.context) + '”</div>' : '') + (src ? '<div class="srcline">— ' + src + '</div>' : ''));
     add('f.note', c.note ? '<div>' + esc(c.note) + '</div>' : '');
-    if (opts.source) {
-      var src = c.source ? (c.source_url ? '<a class="more" href="' + esc(c.source_url) + '" target="_blank" rel="noopener">' + esc(c.source) + '</a>' : esc(c.source)) : '';
-      add('f.source', src ? '<div>' + src + '</div>' : '');
-    }
     return '<div class="fields">' + f.join('') + '</div>';
   }
   function itemHTML(c) {
@@ -286,14 +264,14 @@
       '<div class="sech"><h2>' + t('months') + '</h2></div><div id="months"></div></section>';
     h += '<aside class="homeside"><div class="panel duecta"><div><div class="eyebrow">' + t('due.title') + '</div><b>' +
       (due ? due + ' ' + t('due.n') : t('due.none')) + '</b></div>' + (due ? '<a class="btn" href="#/study?deck=due">' + t('due.go') + '</a>' : '') + '</div>' +
-      cloud('kinds', 'kind') + cloud('tags', 'tags') + cloud('sources', 'source') + '</aside></div>';
+      cloud('kinds', 'kind') + cloud('tags', 'tags') + '</aside></div>';
     APP.innerHTML = h;
     months();
   }
   function cloud(title, key) {
     var c = counts(key);
     if (!c.length) return '';
-    var param = key === 'tags' ? 'tag' : key === 'source' ? 'src' : 'kind';
+    var param = key === 'tags' ? 'tag' : 'kind';
     return '<div class="panel"><div class="eyebrow">' + t(title) + '</div><div class="cloud">' +
       c.map(function (x) { return chip(key === 'kind' ? t(x[0]) : x[0], '#/browse?' + param + '=' + encodeURIComponent(x[0]), colorOf(x[0]), x[1]); }).join('') + '</div></div>';
   }
@@ -308,7 +286,7 @@
       var y = +cur.slice(0, 4), m = +cur.slice(5, 7), first = new Date(y, m - 1, 1), days = new Date(y, m, 0).getDate();
       var max = 1, total = 0;
       for (var d = 1; d <= days; d++) { var k = cur + '-' + String(d).padStart(2, '0'); max = Math.max(max, by[k] || 0); total += by[k] || 0; }
-      var wk = R.dataset.lang === 'en' ? ['M', 'T', 'W', 'T', 'F', 'S', 'S'] : ['一', '二', '三', '四', '五', '六', '日'];
+      var wk = ['一', '二', '三', '四', '五', '六', '日'];
       var g = wk.map(function (x) { return '<span>' + x + '</span>'; }).join('');
       for (var p = 0; p < (first.getDay() + 6) % 7; p++) g += '<i class="hc off"></i>';
       for (d = 1; d <= days; d++) {
@@ -327,10 +305,10 @@
   /* ---- browse: list + filters + search ---- */
   function browse(q) {
     if (!CARDS.length) { APP.innerHTML = emptyAll(); return; }
-    var st = { q: q.get('q') || '', tag: q.get('tag') || '', kind: q.get('kind') || '', src: q.get('src') || '', star: q.get('star') === '1', day: q.get('day') || '' };
+    var st = { q: q.get('q') || '', tag: q.get('tag') || '', kind: q.get('kind') || '', star: q.get('star') === '1', day: q.get('day') || '' };
     function href(patch) {
       var s = Object.assign({}, st, patch), p = new URLSearchParams();
-      ['q', 'tag', 'kind', 'src', 'day'].forEach(function (k) { if (s[k]) p.set(k, s[k]); });
+      ['q', 'tag', 'kind', 'day'].forEach(function (k) { if (s[k]) p.set(k, s[k]); });
       if (s.star) p.set('star', '1');
       var x = p.toString();
       return '#/browse' + (x ? '?' + x : '');
@@ -338,9 +316,8 @@
     function group(label, chipsHTML) { return chipsHTML ? '<div class="fgroup"><span class="flabel">' + label + '</span><div class="filters">' + chipsHTML + '</div></div>' : ''; }
     var filters = group(t('kinds'), counts('kind').map(function (x) { return chip(t(x[0]), href({ kind: st.kind === x[0] ? '' : x[0] }), colorOf(x[0]), x[1], st.kind === x[0]); }).join('') +
         chip('★ ' + t('starred'), href({ star: !st.star }), '#f5b400', null, st.star)) +
-      group(t('tags'), counts('tags').map(function (x) { return chip(x[0], href({ tag: st.tag === x[0] ? '' : x[0] }), colorOf(x[0]), x[1], st.tag === x[0]); }).join('')) +
-      group(t('sources'), counts('source').map(function (x) { return chip(x[0], href({ src: st.src === x[0] ? '' : x[0] }), colorOf(x[0]), x[1], st.src === x[0]); }).join(''));
-    var any = st.tag || st.kind || st.src || st.star || st.day;
+      group(t('tags'), counts('tags').map(function (x) { return chip(x[0], href({ tag: st.tag === x[0] ? '' : x[0] }), colorOf(x[0]), x[1], st.tag === x[0]); }).join(''));
+    var any = st.tag || st.kind || st.star || st.day;
     APP.innerHTML = '<div class="rhead"><h1 class="rtitle">' + t('nav.browse') + (st.day ? ' · ' + esc(st.day) : '') + '</h1>' +
       '<div class="count"><b id="count">0</b> ' + t('cards.n') + (any ? ' · <a class="more" href="#/browse">' + t('clear') + '</a>' : '') +
       '<span class="exports"><button class="ghost" id="excsv">' + t('exportc') + '</button><button class="ghost" id="exanki">' + t('exporta') + '</button></span></div>' +
@@ -355,7 +332,6 @@
       shown = CARDS.filter(function (c) {
         if (st.kind && c.kind !== st.kind) return false;
         if (st.tag && list(c.tags).indexOf(st.tag) < 0) return false;
-        if (st.src && c.source !== st.src) return false;
         if (st.day && c.day !== st.day) return false;
         if (st.star && !isStar(c)) return false;
         if (!terms.length) return true;
@@ -411,7 +387,7 @@
       '<div class="pron" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:var(--mut);font-family:var(--mono)">' +
       (c.pos ? '<span class="pos">' + esc(c.pos) + '</span>' : '') + (c.ipa ? '<span>' + esc(c.ipa) + '</span>' : '') + sayBtn(c.term) + accentSeg() + '</div>' +
       '<p class="mz">' + esc(c.meaning_zh) + '</p><p class="mute" style="margin:0">' + esc(c.meaning_en) + '</p>' +
-      fieldsHTML(c, { say: true, source: true }) +
+      fieldsHTML(c, { say: true }) +
       '<div class="meta" style="margin-top:20px">' + (list(c.tags).length ? '<span class="tags">' + list(c.tags).map(function (x) { return chip(x, '#/browse?tag=' + encodeURIComponent(x), colorOf(x)); }).join('') + '</span>' : '') +
       '<span>' + t('added') + ' ' + esc(c.day) + '</span></div></article>';
   }
