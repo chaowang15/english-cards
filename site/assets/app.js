@@ -210,7 +210,9 @@
     add('f.collocations', list(c.collocations).length ? '<div class="chips">' + list(c.collocations).map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div>' : '');
     add('f.synonyms', list(c.synonyms).length ? '<div class="chips">' + list(c.synonyms).map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div>' : '');
     add('f.antonyms', list(c.antonyms).length ? '<div class="chips">' + list(c.antonyms).map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div>' : '');
-    var src = c.source ? (c.source_url ? '<a class="more" href="' + esc(c.source_url) + '" target="_blank" rel="noopener">' + esc(c.source) + '</a>' : esc(c.source)) : '';
+    var srcLabel = c.source || (c.source_url ? String(c.source_url).replace(/^https?:\/\/(www\.)?/, '').split('/')[0] : '');
+    var src = !srcLabel ? '' : /^https?:\/\//.test(c.source_url || '')
+      ? '<a class="more" href="' + esc(c.source_url) + '" target="_blank" rel="noopener">' + esc(srcLabel) + ' ↗</a>' : esc(srcLabel);
     add('f.context', (c.context ? '<div class="ctx">“' + esc(c.context) + '”</div>' : '') + (src ? '<div class="srcline">— ' + src + '</div>' : ''));
     add('f.note', c.note ? '<div>' + esc(c.note) + '</div>' : '');
     return '<div class="fields">' + f.join('') + '</div>';
