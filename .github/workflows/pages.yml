@@ -1,0 +1,50 @@
+name: Build and Deploy Pages
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 * * * *"   # hourly safety net; writes from Apps Script also send repository_dispatch
+  repository_dispatch:
+    types: [cards-updated]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Fetch cards and build encrypted site
+        env:
+          CARDS_API_URL: ${{ secrets.CARDS_API_URL }}
+          CARDS_API_KEY: ${{ secrets.CARDS_API_KEY }}
+          CARDS_PASSWORD: ${{ secrets.CARDS_PASSWORD }}
+        run: node scripts/build.mjs
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          timeout: 1800000

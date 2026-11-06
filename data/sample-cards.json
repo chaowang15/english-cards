@@ -1,0 +1,85 @@
+{
+  "note": "Sample cards for local preview only. Real cards live in the Google Sheet and are never committed.",
+  "cards": [
+    {
+      "id": "serendipity-a1b2c3", "term": "serendipity", "aliases": ["serendipitous"], "kind": "word", "pos": "n.", "ipa": "/ˌserənˈdɪpəti/",
+      "meaning_zh": "意外发现美好事物的运气；机缘巧合", "meaning_en": "The luck of finding something good or useful by chance.",
+      "usage": "Usually uncountable. The adjective is \"serendipitous\".",
+      "examples": ["Meeting my co-founder at that conference was pure serendipity.", "Many scientific discoveries happened through serendipity."],
+      "synonyms": ["chance", "fluke", "happy accident"], "antonyms": ["misfortune"], "collocations": ["pure serendipity", "by serendipity"],
+      "source": "podcast", "source_url": "", "context": "A lot of great research comes from serendipity, not planning.",
+      "tags": ["everyday", "abstract"], "note": "", "status": "learning", "starred": true,
+      "created_at": "2026-10-08T17:20:00Z", "updated_at": "2026-10-08T17:20:00Z"
+    },
+    {
+      "id": "run-into-d4e5f6", "term": "run into", "aliases": ["ran into", "running into"], "kind": "phrase", "pos": "phr. v.", "ipa": "/rʌn ˈɪntuː/",
+      "meaning_zh": "偶遇；遇到（问题）", "meaning_en": "To meet someone by chance; to encounter a problem.",
+      "usage": "run into + person / problem. Informal and very common in speech.",
+      "examples": ["I ran into an old friend at the airport.", "We ran into a few issues during the migration."],
+      "synonyms": ["bump into", "come across", "encounter"], "antonyms": [], "collocations": ["run into trouble", "run into problems", "run into someone"],
+      "source": "work", "source_url": "", "context": "Did you run into any problems with the new build?",
+      "tags": ["work", "phrasal verb"], "note": "Work standup 常用。", "status": "known", "starred": false,
+      "created_at": "2026-10-15T20:02:00Z", "updated_at": "2026-10-15T20:02:00Z"
+    },
+    {
+      "id": "the-elephant-in-the-room-0a1b2c", "term": "the elephant in the room", "aliases": [], "kind": "idiom", "pos": "idiom", "ipa": "",
+      "meaning_zh": "明显存在却被大家刻意回避的问题", "meaning_en": "An obvious problem that people avoid talking about.",
+      "usage": "Often used with \"address\" or \"ignore\".",
+      "examples": ["Let's address the elephant in the room: we are over budget.", "Nobody mentioned the layoffs — the elephant in the room."],
+      "synonyms": ["taboo topic"], "antonyms": [], "collocations": ["address the elephant in the room"],
+      "source": "meeting", "source_url": "", "context": "Okay, the elephant in the room is the launch date.",
+      "tags": ["work", "idiom"], "note": "", "status": "new", "starred": false,
+      "created_at": "2026-10-21T18:45:00Z", "updated_at": "2026-10-21T18:45:00Z"
+    },
+    {
+      "id": "nuance-3c4d5e", "term": "nuance", "aliases": ["nuanced"], "kind": "word", "pos": "n.", "ipa": "/ˈnuːɑːns/",
+      "meaning_zh": "细微差别", "meaning_en": "A subtle difference in meaning, expression, or sound.",
+      "usage": "\"nuanced\" (adj.) = showing subtle differences: a nuanced view.",
+      "examples": ["The translation misses some of the nuance of the original.", "She gave a nuanced answer to a difficult question."],
+      "synonyms": ["subtlety", "shade"], "antonyms": [], "collocations": ["subtle nuance", "a nuanced view", "lose the nuance"],
+      "source": "article", "source_url": "https://example.com/article", "context": "The debate needs more nuance.",
+      "tags": ["writing", "abstract"], "note": "", "status": "learning", "starred": true,
+      "created_at": "2026-10-27T03:10:00Z", "updated_at": "2026-10-27T03:10:00Z"
+    },
+    {
+      "id": "touch-base-6f7a8b", "term": "touch base", "aliases": ["touching base"], "kind": "phrase", "pos": "phr.", "ipa": "/tʌtʃ beɪs/",
+      "meaning_zh": "（简短地）联系一下、碰个头", "meaning_en": "To briefly contact someone to check in or update.",
+      "usage": "touch base with sb (about sth). Business English.",
+      "examples": ["Let's touch base next week about the schedule.", "I just wanted to touch base before the review."],
+      "synonyms": ["check in", "catch up", "sync up"], "antonyms": [], "collocations": ["touch base with", "touch base later"],
+      "source": "work", "source_url": "", "context": "Can we touch base after lunch?",
+      "tags": ["work"], "note": "", "status": "known", "starred": false,
+      "created_at": "2026-11-01T22:30:00Z", "updated_at": "2026-11-01T22:30:00Z"
+    },
+    {
+      "id": "ubiquitous-9c0d1e", "term": "ubiquitous", "aliases": ["ubiquity"], "kind": "word", "pos": "adj.", "ipa": "/juːˈbɪkwɪtəs/",
+      "meaning_zh": "无处不在的", "meaning_en": "Present, appearing, or found everywhere.",
+      "usage": "Formal. Noun: ubiquity.",
+      "examples": ["Smartphones have become ubiquitous.", "The ubiquitous coffee shops on every corner."],
+      "synonyms": ["omnipresent", "pervasive", "everywhere"], "antonyms": ["rare", "scarce"], "collocations": ["become ubiquitous", "almost ubiquitous"],
+      "source": "Hacker News", "source_url": "", "context": "LLMs are now ubiquitous in developer tools.",
+      "tags": ["tech", "writing"], "note": "", "status": "new", "starred": false,
+      "created_at": "2026-11-03T16:05:00Z", "updated_at": "2026-11-03T16:05:00Z"
+    },
+    {
+      "id": "for-what-its-worth-2f3a4b", "term": "for what it's worth", "aliases": ["FWIW"], "kind": "usage", "pos": "phr.", "ipa": "",
+      "meaning_zh": "不管有没有用（我说一句）；仅供参考", "meaning_en": "Used to offer an opinion modestly, without claiming it is important.",
+      "usage": "Usually at the start or end of a sentence. Written as FWIW in chats.",
+      "examples": ["For what it's worth, I think you made the right call.", "FWIW, the old version was faster."],
+      "synonyms": ["just my two cents", "for the record"], "antonyms": [], "collocations": [],
+      "source": "Slack", "source_url": "", "context": "FWIW the flaky test is unrelated to your change.",
+      "tags": ["chat", "work"], "note": "语气谦和，不是\"值多少钱\"。", "status": "new", "starred": false,
+      "created_at": "2026-11-04T19:40:00Z", "updated_at": "2026-11-04T19:40:00Z"
+    },
+    {
+      "id": "pull-off-5c6d7e", "term": "pull off", "aliases": ["pulled off"], "kind": "phrase", "pos": "phr. v.", "ipa": "/pʊl ˈɒf/",
+      "meaning_zh": "（克服困难）成功做成某事", "meaning_en": "To succeed in doing something difficult.",
+      "usage": "pull it off / pull off + sth. Separable.",
+      "examples": ["Nobody thought we could ship on time, but we pulled it off.", "It's a bold plan — can she pull it off?"],
+      "synonyms": ["manage", "achieve", "accomplish"], "antonyms": ["fail"], "collocations": ["pull it off", "pull off a win"],
+      "source": "TV show", "source_url": "", "context": "I can't believe you pulled that off.",
+      "tags": ["everyday", "phrasal verb"], "note": "", "status": "learning", "starred": false,
+      "created_at": "2026-11-05T15:12:00Z", "updated_at": "2026-11-05T15:12:00Z"
+    }
+  ]
+}
