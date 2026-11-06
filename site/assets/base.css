@@ -88,6 +88,7 @@ button{font:inherit;color:inherit}
 .wod .acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;align-items:stretch}
 .wod .acts .ghost{display:inline-flex;align-items:center;padding:0 18px;font-size:14px}
 body.locked .tabbar,body.locked .ecfoot,body.locked .links,body.locked .searchbox{display:none}
+body.locked .themepick{margin-left:auto}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
 .kpi{padding:16px 18px}
 .kpi b{display:block;font:800 28px/1.1 var(--sans);letter-spacing:-.03em}
