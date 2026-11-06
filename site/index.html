@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>English Cards</title>
-<script>(function(){var t=document.documentElement,s=localStorage;t.dataset.scheme=s.getItem('ec-scheme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');t.dataset.view=s.getItem('ec-view')||'one'})();</script>
+<script>(function(){var t=document.documentElement,s=localStorage;t.dataset.scheme=s.getItem('ec-scheme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');t.dataset.view=s.getItem('ec-view')||'one';t.dataset.theme=s.getItem('ec-theme')||'ink'})();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/base.css?v=__V__">
 <link rel="stylesheet" href="assets/theme.css?v=__V__">
 </head>
@@ -21,6 +21,7 @@
     <a href="#/study" data-nav="study"><span data-i="nav.study"></span></a>
   </nav>
   <a class="searchbox" href="#/browse?focus=1"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span data-i="search.ph"></span><kbd>/</kbd></a>
+  <div class="themepick"><button class="iconbtn" id="themebtn" aria-label="配色" title="切换配色"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.9-.6-1.3-.6-2.1 0-.9.7-1.6 1.6-1.6H17a4 4 0 0 0 4-4C21 6.8 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="14.5" cy="7" r="1"/></svg></button></div>
   <button class="iconbtn" onclick="setScheme()" aria-label="theme"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
 </div></header>
 

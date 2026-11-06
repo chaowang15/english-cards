@@ -50,6 +50,29 @@
     R.dataset.scheme = R.dataset.scheme === 'dark' ? 'light' : 'dark';
     store('ec-scheme', R.dataset.scheme);
   };
+  /* ---- palette picker (data-theme), next to the light / dark button ---- */
+  var THEMES = [['ink', '墨绿'], ['neon', '霓虹'], ['ocean', '海蓝'], ['rose', '玫瑰'], ['graphite', '石墨']];
+  var SWATCH = { ink: ['#0f766e', '#c2410c'], neon: ['#f05a00', '#7c3aed'], ocean: ['#2563eb', '#0891b2'], rose: ['#e11d48', '#7c3aed'], graphite: ['#27272a', '#d97706'] };
+  (function () {
+    var btn = document.getElementById('themebtn');
+    if (!btn) return;
+    function close() { var m = document.querySelector('.thmenu'); if (m) m.remove(); }
+    btn.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      if (document.querySelector('.thmenu')) return close();
+      var m = document.createElement('div');
+      m.className = 'thmenu';
+      m.innerHTML = THEMES.map(function (x) {
+        return '<button data-theme-pick="' + x[0] + '" class="' + (R.dataset.theme === x[0] ? 'on' : '') + '"><span class="sw"><i style="background:' + SWATCH[x[0]][0] + '"></i><i style="background:' + SWATCH[x[0]][1] + '"></i></span>' + x[1] + '</button>';
+      }).join('');
+      btn.parentNode.appendChild(m);
+    });
+    document.addEventListener('click', function (ev) {
+      var b = ev.target.closest && ev.target.closest('[data-theme-pick]');
+      if (b) { R.dataset.theme = b.dataset.themePick; store('ec-theme', R.dataset.theme); }
+      close();
+    });
+  })();
   function syncSet() {
     $$('[data-set]').forEach(function (b) { var kv = b.dataset.set.split(':'); b.classList.toggle('on', R.dataset[kv[0]] === kv[1]); });
     $$('[data-i]').forEach(function (n) { n.textContent = t(n.dataset.i); });
