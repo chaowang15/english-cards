@@ -23,7 +23,7 @@ No server and no model calls at build time.
 | --- | --- |
 | `apps_script/Code.gs` | Web App bound to the Sheet: `get`, `search`, `add` (merges duplicates by term/aliases), `update`, `delete` |
 | `scripts/build.mjs` | Fetch cards (or read `--input`), encrypt, write `_site/` |
-| `site/` | Single-page front end: home (word of the day, stats, favorites, recent, calendar), browse (favorites, time / kind / tag filters, sort, search, export), study (flashcards), card detail |
+| `site/` | Single-page front end: home (word of the day, stats, recent, calendar), browse (time / kind / tag filters, sort, search, export), favorites, study (flashcards, Leitner review), card detail, device settings (`#/sync`); five color themes × light / dark |
 | `data/sample-cards.json` | Fake sample cards for local preview |
 | `.github/workflows/pages.yml` | Hourly / dispatch / push build and Pages deploy |
 
@@ -86,8 +86,14 @@ Settings → Pages → Source: **GitHub Actions**.
 
 Optional instant rebuilds: create a fine-grained token with *Contents: read and write* on this repository and add Script Properties `GITHUB_TOKEN` and `GITHUB_REPO` (`owner/english-cards`). Each write then sends a `cards-updated` dispatch; otherwise the hourly run picks changes up.
 
+## Updating and syncing
+
+- **同步 button** (top bar): reads the Sheet directly in the browser (the API URL and key are inside the encrypted payload) and caches the cards on the device, then syncs favorites and review progress. Use it after editing the Sheet by hand or through ChatGPT's own Google connector.
+- **Rebuilds**: writes through the API send `repository_dispatch` (about a minute); the hourly schedule catches everything else.
+- **Favorites / review progress across devices**: open `?sync` (or 本机设置 in the footer), paste a GitHub token with only the `gist` scope once per device; data goes to a private gist `english-cards-sync.json`.
+
 ## Security notes
 
 - The site, its code and the encrypted file are public; card text is not readable without the password. Use a long password: anyone can download the encrypted file and try passwords offline.
-- The Apps Script key grants read and write access to all cards; keep it only in the GPT Action and GitHub secrets.
+- The Apps Script key grants read and write access to all cards. It is kept in GitHub secrets, the GPT Action if any, and inside the encrypted payload for the 同步 button — so the site password also protects write access.
 - The page stores the password in `localStorage` on devices where it was entered; use "Sign out" on shared machines.
