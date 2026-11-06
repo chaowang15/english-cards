@@ -93,8 +93,8 @@ body.locked .tabbar,body.locked .ecfoot,body.locked .links,body.locked .searchbo
 .kpi b{display:block;font:800 28px/1.1 var(--sans);letter-spacing:-.03em}
 .kpi small{color:var(--mut);font-size:13px}
 .kpi.due b{color:var(--acc)}
-.homegrid{display:grid;grid-template-columns:1fr 340px;gap:28px;align-items:start}
-.homeside{display:flex;flex-direction:column;gap:14px;position:sticky;top:76px;margin-top:40px}
+.homebottom{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}
+.homeside{display:flex;flex-direction:column;gap:14px;margin-top:40px}
 .homeside .panel{padding:18px}.homeside .cloud{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
 .duecta{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .duecta b{font-size:17px}
@@ -196,7 +196,7 @@ button.hc{cursor:pointer}button.hc:hover{outline:2px solid var(--acc2);outline-o
 .keys{color:var(--mut);font-size:12px;text-align:center}
 .done{padding:40px;text-align:center}.done h2{font:800 30px var(--sans);margin:8px 0}
 
-@media (max-width:1000px){.homegrid{grid-template-columns:1fr}.homeside{position:static;margin-top:0}}
+@media (max-width:860px){.homebottom{grid-template-columns:minmax(0,1fr)}.homeside{margin-top:0}}
 @media (max-width:860px){
  .wod{grid-template-columns:1fr;padding:24px 22px;gap:18px}.kpis{grid-template-columns:1fr 1fr}
  .cl{grid-template-columns:minmax(0,1fr)}.toolbar{top:56px}.sech{margin:30px 0 12px}
@@ -207,3 +207,7 @@ button.hc{cursor:pointer}button.hc:hover{outline:2px solid var(--acc2);outline-o
 }
 @media (max-width:560px){.wrap{padding:0 14px}.toolbar{margin:0 -14px;padding:10px 14px}.seg button{padding:7px 10px}.kpi b{font-size:24px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.setbox{padding:22px 24px;margin-top:16px;max-width:760px}
+.setbox p{margin:8px 0 12px;line-height:1.65}.setbox .small{font-size:13px}
+.setrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.syncstat{color:var(--mut);font-size:13px}

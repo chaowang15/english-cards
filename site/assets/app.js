@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   var R = document.documentElement, APP = document.getElementById('app');
-  var PASS = 'ec-pass', STARS = 'ecStarsV1', PROG = 'ecProgressV1', LOG = 'ecStudyLogV1', ACCENT = 'ec-accent';
+  var PASS = 'ec-pass', STARS = 'ecStarsV2', STARS_V1 = 'ecStarsV1', PROG = 'ecProgressV1', LOG = 'ecStudyLogV1', ACCENT = 'ec-accent';
   var BOX_DAYS = [0, 1, 2, 4, 8, 16, 32];
   var KIND_C = { word: '#3b82f6', phrase: '#22c55e', idiom: '#f59e0b', usage: '#ec4899', group: '#8b5cf6' };
   var PALETTE = ['#8b5cf6', '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#f97316', '#6366f1', '#84cc16', '#14b8a6', '#d946ef'];
@@ -106,15 +106,25 @@
     BY = {};
     CARDS.forEach(function (c) { c.day = localDay(c.created_at); BY[c.id] = c; });
     route();
+    if (Sync.token() && Date.now() - Number(localStorage.getItem(SYNC_LAST) || 0) > 60000) Sync.run();
   }
 
   /* ---- stars (local override of the Sheet's `starred`) and review progress ---- */
-  function isStar(c) { var s = jget(STARS, {}); return c.id in s ? !!s[c.id] : !!c.starred; }
-  function toggleStar(id) {
-    var s = jget(STARS, {}), c = BY[id];
-    s[id] = !isStar(c);
+  /* stars: {id: {v: bool, t: iso}}; v1 stored plain booleans */
+  (function migrateStars() {
+    var old = jget(STARS_V1, null);
+    if (!old || localStorage.getItem(STARS)) return;
+    var s = {};
+    Object.keys(old).forEach(function (k) { s[k] = { v: !!old[k], t: '1970-01-01T00:00:00.000Z' }; });
     store(STARS, JSON.stringify(s));
-    return s[id];
+  })();
+  function isStar(c) { var s = jget(STARS, {})[c.id]; return s ? !!s.v : !!c.starred; }
+  function toggleStar(id) {
+    var s = jget(STARS, {}), on = !isStar(BY[id]);
+    s[id] = { v: on, t: new Date().toISOString() };
+    store(STARS, JSON.stringify(s));
+    Sync.soon();
+    return on;
   }
   function prog(id) { return jget(PROG, {})[id] || null; }
   function isDue(c) { var p = prog(c.id); return !p || p.due <= ymd(); }
@@ -124,12 +134,13 @@
     else if (g === 2) p.box = Math.min(p.box + 1, BOX_DAYS.length - 1);
     else p.box = Math.max(p.box, 1);
     p.due = addDays(today, g === 0 ? 0 : g === 1 ? 1 : BOX_DAYS[p.box]);
-    p.last = today; p.n = (p.n || 0) + 1;
+    p.last = today; p.n = (p.n || 0) + 1; p.t = new Date().toISOString();
     all[id] = p;
     store(PROG, JSON.stringify(all));
     var log = jget(LOG, {});
     log[today] = (log[today] || 0) + 1;
     store(LOG, JSON.stringify(log));
+    Sync.soon();
   }
   function streak() {
     var log = jget(LOG, {}), d = ymd(), n = 0;
@@ -251,6 +262,7 @@
     if (top === 'browse') browse(r.q);
     else if (top === 'study') study(r.q);
     else if (top === 'card') detail(decodeURIComponent(r.path.slice(5)));
+    else if (top === 'sync') settings();
     else home();
     syncSet();
   }
@@ -284,11 +296,11 @@
       '<div class="kpi panel"><b>' + week + '</b><small>' + t('k.week') + '</small></div>' +
       '<div class="kpi panel"><b>' + streak() + '</b><small>' + t('k.streak') + '</small></div>' +
       '<a class="kpi panel due" href="#/study?deck=due"><b>' + due + '</b><small>' + t('k.due') + '</small></a></div></section>';
-    h += '<div class="homegrid"><section><div class="sech"><h2>' + t('recent') + '</h2>' + viewSeg() + '</div>' +
+    h += '<section><div class="sech"><h2>' + t('recent') + '</h2>' + viewSeg() + '</div>' +
       '<div class="cl">' + CARDS.slice(0, 10).map(itemHTML).join('') + '</div>' +
-      (CARDS.length > 10 ? '<a class="more" href="#/browse">' + t('all') + ' ' + CARDS.length + ' →</a>' : '') +
-      '<div class="sech"><h2>' + t('months') + '</h2></div><div id="months"></div></section>';
-    h += '<aside class="homeside"><div class="panel duecta"><div><div class="eyebrow">' + t('due.title') + '</div><b>' +
+      (CARDS.length > 10 ? '<a class="more" href="#/browse">' + t('all') + ' ' + CARDS.length + ' →</a>' : '') + '</section>';
+    h += '<div class="homebottom"><section><div class="sech"><h2>' + t('months') + '</h2></div><div id="months"></div></section>' +
+      '<aside class="homeside"><div class="panel duecta"><div><div class="eyebrow">' + t('due.title') + '</div><b>' +
       (due ? due + ' ' + t('due.n') : t('due.none')) + '</b></div>' + (due ? '<a class="btn" href="#/study?deck=due">' + t('due.go') + '</a>' : '') + '</div>' +
       favPanel() + cloud('kinds', 'kind') + cloud('tags', 'tags') + '</aside></div>';
     APP.innerHTML = h;
@@ -563,18 +575,125 @@
     draw();
   }
 
-  /* footer: sign out on this device */
+  /* ---- sync stars, review progress and study log across the owner's devices via a private GitHub Gist ----
+     Same approach as hackernews favorites sync: paste a gist-scoped token once per device on #/sync.
+     Merge: per card the newest `t` wins (stars and progress); study log takes the max per day. */
+  var SYNC_TOKEN = 'ecSyncToken', SYNC_GIST = 'ecSyncGist', SYNC_LAST = 'ecSyncLast';
+  var GIST_FILE = 'english-cards-sync.json', GIST_DESC = 'English Cards sync (stars, review progress)';
+  var Sync = {
+    token: function () { return localStorage.getItem(SYNC_TOKEN) || ''; },
+    status: function (msg) { $$('.syncstat').forEach(function (n) { n.textContent = msg; }); },
+    api: function (path, opt) {
+      opt = opt || {};
+      opt.headers = { 'Authorization': 'Bearer ' + Sync.token(), 'Accept': 'application/vnd.github+json' };
+      if (opt.body) opt.headers['Content-Type'] = 'application/json';
+      return fetch('https://api.github.com' + path, opt).then(function (r) {
+        if (!r.ok) throw new Error('GitHub ' + r.status);
+        return r.json();
+      });
+    },
+    findGist: function () {
+      var id = localStorage.getItem(SYNC_GIST);
+      if (id) return Sync.api('/gists/' + id).catch(function () { localStorage.removeItem(SYNC_GIST); return Sync.findGist(); });
+      return Sync.api('/gists?per_page=100').then(function (list) {
+        var g = list.filter(function (x) { return x.files && x.files[GIST_FILE]; })[0];
+        if (g) return Sync.api('/gists/' + g.id);
+        var files = {}; files[GIST_FILE] = { content: '{"stars":{},"progress":{},"log":{}}' };
+        return Sync.api('/gists', { method: 'POST', body: JSON.stringify({ description: GIST_DESC, public: false, files: files }) });
+      }).then(function (g) { store(SYNC_GIST, g.id); return g; });
+    },
+    readRemote: function (g) {
+      var f = g.files[GIST_FILE];
+      var body = f && f.truncated ? fetch(f.raw_url).then(function (r) { return r.text(); }) : Promise.resolve(f ? f.content : '');
+      return body.then(function (txt) { try { return JSON.parse(txt || '{}'); } catch (e) { return {}; } });
+    },
+    local: function () { return { stars: jget(STARS, {}), progress: jget(PROG, {}), log: jget(LOG, {}) }; },
+    merge: function (a, b) {
+      function newest(x, y) {
+        var out = {};
+        Object.keys(x || {}).concat(Object.keys(y || {})).forEach(function (k) {
+          var p = (x || {})[k], q = (y || {})[k];
+          out[k] = !p ? q : !q ? p : String(q.t || '') > String(p.t || '') ? q : p;
+        });
+        return out;
+      }
+      var log = {};
+      [a.log || {}, b.log || {}].forEach(function (l) { Object.keys(l).forEach(function (d) { log[d] = Math.max(log[d] || 0, l[d]); }); });
+      return { stars: newest(a.stars, b.stars), progress: newest(a.progress, b.progress), log: log };
+    },
+    run: function () {
+      if (!Sync.token() || Sync.busy) return Promise.resolve();
+      Sync.busy = true;
+      Sync.status('同步中…');
+      var gist, before = JSON.stringify(Sync.local());
+      return Sync.findGist().then(function (g) { gist = g; return Sync.readRemote(g); }).then(function (remote) {
+        var m = Sync.merge(Sync.local(), remote), body = JSON.stringify(m);
+        store(STARS, JSON.stringify(m.stars));
+        store(PROG, JSON.stringify(m.progress));
+        store(LOG, JSON.stringify(m.log));
+        if (body !== before && DATA && parse().path.indexOf('study') !== 0) route();
+        if (body === JSON.stringify(Sync.merge(remote, {}))) return;
+        var files = {}; files[GIST_FILE] = { content: body };
+        return Sync.api('/gists/' + gist.id, { method: 'PATCH', body: JSON.stringify({ files: files }) });
+      }).then(function () {
+        store(SYNC_LAST, String(Date.now()));
+        Sync.status('已同步 · ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      }).catch(function (err) {
+        Sync.status('同步失败：' + err.message);
+      }).then(function () { Sync.busy = false; });
+    },
+    soon: function () {
+      if (!Sync.token()) return;
+      clearTimeout(Sync._t);
+      Sync._t = setTimeout(Sync.run, 1500);
+    }
+  };
+
+  /* ---- #/sync: this device's settings (sync token, sign out) ---- */
+  function settings() {
+    var on = !!Sync.token(), last = localStorage.getItem(SYNC_LAST);
+    APP.innerHTML = '<div class="rhead"><h1 class="rtitle">本机设置</h1><p class="mute" style="margin:6px 0 0">这些设置只对当前这台设备、这个浏览器有效。</p></div>' +
+      '<div class="panel setbox"><div class="eyebrow">多设备同步</div>' +
+      '<p>把收藏、复习进度和学习记录同步到你自己的私有 GitHub Gist，手机和各台电脑看到的一样。每台设备设置一次。</p>' +
+      (on ? '<div class="setrow"><b>已开启</b><span class="syncstat">' + (last ? '上次同步 ' + new Date(Number(last)).toLocaleString() : '') + '</span></div>' +
+        '<div class="setrow"><button class="btn" id="syncnow">立即同步</button><button class="ghost" id="syncoff">在这台设备关闭</button></div>'
+        : '<div class="setrow"><input class="inp" id="synctoken" type="password" autocomplete="off" placeholder="GitHub token（只需要 gist 权限）"><button class="btn" id="syncsave">保存并同步</button></div>' +
+          '<p class="mute small">在 GitHub → Settings → Developer settings → Personal access tokens 建一个只勾 <b>gist</b> 的 token。可以和 Hacker News 收藏同步用同一个。</p><span class="syncstat"></span>') +
+      '</div>' +
+      '<div class="panel setbox"><div class="eyebrow">退出</div>' +
+      '<p>网站密码保存在这个浏览器里，所以打开时不用每次输入。在别人的电脑或公用电脑上用完后，可以在这里退出：清除本机保存的密码，下次打开要重新输入。收藏和复习进度不受影响。</p>' +
+      '<div class="setrow"><button class="ghost" id="signout">退出并清除本机密码</button></div></div>';
+    if (on) {
+      document.getElementById('syncnow').onclick = Sync.run;
+      document.getElementById('syncoff').onclick = function () {
+        if (!confirm('在这台设备上关闭同步？（收藏和进度保留在本机）')) return;
+        [SYNC_TOKEN, SYNC_GIST, SYNC_LAST].forEach(function (k) { localStorage.removeItem(k); });
+        settings();
+      };
+    } else {
+      document.getElementById('syncsave').onclick = function () {
+        var v = document.getElementById('synctoken').value.trim();
+        if (!v) return;
+        store(SYNC_TOKEN, v);
+        settings();
+        Sync.run();
+      };
+    }
+    document.getElementById('signout').onclick = function () {
+      localStorage.removeItem(PASS);
+      DATA = null;
+      location.hash = '#/';
+      lockScreen('');
+    };
+  }
+  if (/[?&]sync\b/.test(location.search)) { history.replaceState(null, '', location.pathname + '#/sync'); }
+
+  /* footer: link to this device's settings */
   var foot = document.createElement('footer');
   foot.className = 'empty ecfoot';
   foot.style.padding = '30px 0 40px';
-  foot.innerHTML = '<a class="more" href="#" id="signout" data-i="lock.out" style="font-size:13px"></a>';
+  foot.innerHTML = '<a class="mute" href="#/sync" style="font-size:13px">本机设置 · 同步 / 退出</a>';
   document.body.insertBefore(foot, document.querySelector('.tabbar'));
-  document.getElementById('signout').onclick = function (ev) {
-    ev.preventDefault();
-    localStorage.removeItem(PASS);
-    DATA = null;
-    lockScreen('');
-  };
 
   boot();
 })();
