@@ -346,8 +346,8 @@ var COMPLETE_PROMPT = [
   '- entries: only for group cards — 3-8 English expressions, each "english — 简短中文说明". Otherwise [].',
   '- pos: e.g. "n.", "v.", "adj.", "phr. v.", "idiom"; "" for group. ipa: American IPA for single English words, else "".',
   '- usage: one short Chinese note on usage, register or common mistakes, or "".',
-  '- synonyms, collocations: up to 4 each, English; may be [].',
-  '- tags: 1-3 lowercase English labels for register or topic (e.g. spoken, written, business, work, research, tech, cooking, emotion, daily, life).',
+  '- synonyms: up to 4 English synonyms. collocations: up to 4 common word combinations (e.g. "a nuanced view"); never inflected forms of the term itself; may be [].',
+  '- tags: 1-3 lowercase English labels for register or topic. Choose from EXISTING TAGS below; add a new tag only if none fits.',
   '- Keep any information the input already has; do not invent sources or personal notes.'
 ].join('\n');
 
@@ -355,17 +355,21 @@ var COMPLETE_PROMPT = [
 function callModel_(key, cards) {
   var p = PropertiesService.getScriptProperties();
   var model = p.getProperty('OPENAI_MODEL') || 'gpt-5-mini';
+  var known = {};
+  readAll_().forEach(function (o) { list_(o.tags).forEach(function (t) { if (!/^(ai-filled|notion-import)$/.test(t)) known[t] = 1; }); });
+  var tags = Object.keys(known).sort();
   var input = cards.map(function (o) {
     return { term: String(o.term), meaning_zh: String(o.meaning_zh || ''), meaning_en: String(o.meaning_en || ''),
       examples: list_(o.examples), entries: list_(o.entries), context: String(o.context || '') };
   });
   var body = {
     model: model,
-    input: COMPLETE_PROMPT + '\n\nInput cards (JSON):\n' + JSON.stringify(input),
+    input: COMPLETE_PROMPT + '\n\nEXISTING TAGS: ' + (tags.join(', ') || '(none)') + '\n\nInput cards (JSON):\n' + JSON.stringify(input),
     text: { format: { type: 'json_schema', name: 'cards', strict: true, schema: {
       type: 'object', additionalProperties: false, required: ['cards'],
       properties: { cards: { type: 'array', items: CARD_SCHEMA } } } } }
   };
+  if (/^(gpt-5|o\d)/.test(model)) body.reasoning = { effort: 'minimal' };  // definitions need no long reasoning; much faster
   var res = UrlFetchApp.fetch('https://api.openai.com/v1/responses', {
     method: 'post', contentType: 'application/json', muteHttpExceptions: true,
     headers: { Authorization: 'Bearer ' + key }, payload: JSON.stringify(body)
@@ -378,7 +382,14 @@ function callModel_(key, cards) {
   });
   var cardsOut = JSON.parse(text).cards || [];
   if (cardsOut.length !== cards.length) throw new Error('model returned ' + cardsOut.length + ' cards for ' + cards.length);
-  return cardsOut;
+  return cardsOut.map(function (c, i) {
+    var t = String(cards[i].term).toLowerCase();
+    c.meaning_en = c.meaning_en ? c.meaning_en.charAt(0).toUpperCase() + c.meaning_en.slice(1) : '';
+    c.collocations = (c.collocations || []).filter(function (x) { return x.toLowerCase() !== t; });
+    var keep = (c.tags || []).filter(function (x) { return known[x]; });
+    c.tags = keep.length ? keep : (c.tags || []).slice(0, 1);
+    return c;
+  });
 }
 
 /** search: {q, limit?} — substring match over term, aliases, meanings, examples, tags. */
