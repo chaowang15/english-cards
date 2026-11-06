@@ -13,12 +13,12 @@
 
 var SHEET = 'cards';
 var COLUMNS = [
-  'id', 'term', 'aliases', 'kind', 'pos', 'ipa', 'meaning_zh', 'meaning_en', 'usage',
+  'id', 'term', 'aliases', 'kind', 'pos', 'ipa', 'meaning_zh', 'meaning_en', 'entries', 'usage',
   'examples', 'synonyms', 'antonyms', 'collocations', 'source', 'source_url', 'context',
   'tags', 'note', 'status', 'starred', 'created_at', 'updated_at'
 ];
-var LIST_FIELDS = ['aliases', 'examples', 'synonyms', 'antonyms', 'collocations', 'tags'];
-var KINDS = ['word', 'phrase', 'idiom', 'usage'];
+var LIST_FIELDS = ['aliases', 'entries', 'examples', 'synonyms', 'antonyms', 'collocations', 'tags'];
+var KINDS = ['word', 'phrase', 'idiom', 'usage', 'group'];  // group: Chinese headword, English entries
 var STATUSES = ['new', 'learning', 'known'];
 
 function doGet(e) { return handle_(e.parameter || {}); }
@@ -167,7 +167,7 @@ function add_(card) {
   var c = {};
   COLUMNS.forEach(function (k) { c[k] = cell_(k, card[k]); });
   c.id = newId_(card.term);
-  c.kind = KINDS.indexOf(c.kind) >= 0 ? c.kind : (/\s/.test(c.term) ? 'phrase' : 'word');
+  c.kind = KINDS.indexOf(c.kind) >= 0 ? c.kind : /[\u4e00-\u9fff]/.test(c.term) ? 'group' : /\s/.test(c.term) ? 'phrase' : 'word';
   c.status = STATUSES.indexOf(c.status) >= 0 ? c.status : 'new';
   c.created_at = now;
   c.updated_at = now;
@@ -223,7 +223,7 @@ function search_(req) {
   if (!q) return { ok: false, error: 'q is required' };
   var hits = readAll_().map(function (o) {
     var score = norm_(o.term) === q ? 3 : matches_(o, q) ? 2 :
-      [o.term, o.aliases, o.meaning_zh, o.meaning_en, o.examples, o.tags, o.note].map(norm_).join(' ').indexOf(q) >= 0 ? 1 : 0;
+      [o.term, o.aliases, o.meaning_zh, o.meaning_en, o.entries, o.examples, o.tags, o.note].map(norm_).join(' ').indexOf(q) >= 0 ? 1 : 0;
     return { o: o, score: score };
   }).filter(function (x) { return x.score > 0; });
   hits.sort(function (a, b) { return b.score - a.score || String(b.o.updated_at).localeCompare(String(a.o.updated_at)); });

@@ -121,6 +121,14 @@ button.hc{cursor:pointer}button.hc:hover{outline:2px solid var(--acc2);outline-o
 .filters{display:flex;gap:6px;flex-wrap:wrap}
 .count{display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--mut);font-size:14px}.count b{color:var(--fg)}
 .exports{display:flex;gap:8px;margin-left:auto}.exports .ghost{padding:6px 11px;font-size:12.5px}
+.rtop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px}.rtop .rtitle{margin:0}
+.favseg a{display:inline-flex;align-items:center;gap:6px;color:var(--mut);font-weight:600;font-size:13.5px;padding:7px 14px;border-radius:9px;min-height:34px}
+.favseg a b{font:600 11.5px var(--mono);opacity:.7}
+.favseg a.on{background:var(--card-solid);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.favseg a:last-child.on{color:#d49b00}
+.gh{grid-column:1/-1;margin:22px 0 4px;padding:0 8px;font:700 13px var(--sans);letter-spacing:.06em;color:var(--acc)}
+.cl>.gh:first-child{margin-top:6px}
+.ents{margin:0;padding-left:18px}.ents li{margin:4px 0;line-height:1.55}.ents b{font-weight:600}
 .fgroup{display:flex;align-items:baseline;gap:12px;margin-top:12px}
 .flabel{flex:none;width:44px;font:700 12px var(--sans);color:var(--mut);letter-spacing:.04em}
 .rhead{padding:30px 0 14px}
@@ -154,7 +162,7 @@ button.hc{cursor:pointer}button.hc:hover{outline:2px solid var(--acc2);outline-o
 .detail .term{margin:6px 0;font:800 clamp(32px,5vw,52px)/1.1 var(--sans);letter-spacing:-.035em}
 .detail .mz{font:700 20px/1.4 var(--sans);margin:14px 0 2px}
 .detail .fields{font-size:15.5px;gap:16px;margin-top:20px}
-.back{display:inline-flex;gap:6px;align-items:center;color:var(--mut);font-weight:600;font-size:14px;margin-top:22px}.back:hover{color:var(--acc)}
+.backlink{display:inline-flex;gap:6px;align-items:center;color:var(--mut);font-weight:600;font-size:14px;margin-top:22px}.backlink:hover{color:var(--acc)}
 
 /* ---------------- study (flashcards) */
 .study{max-width:760px;margin:0 auto;padding:22px 0 30px}
@@ -192,6 +200,7 @@ button.hc{cursor:pointer}button.hc:hover{outline:2px solid var(--acc2);outline-o
  .face{padding:26px 22px}.keys{display:none}.nav3{grid-template-columns:1fr 1fr}.detail{padding:22px 20px}
  .fgroup .filters{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.fgroup .tag{flex:none}
  .exports{display:none}
+ .toolbar .qbox{flex-basis:100%}.toolbar .seg{flex:1}.toolbar .seg button{flex:1;padding:7px 6px}
 }
 @media (max-width:560px){.wrap{padding:0 14px}.toolbar{margin:0 -14px;padding:10px 14px}.seg button{padding:7px 10px}.kpi b{font-size:24px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

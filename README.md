@@ -23,7 +23,7 @@ No server and no model calls at build time.
 | --- | --- |
 | `apps_script/Code.gs` | Web App bound to the Sheet: `get`, `search`, `add` (merges duplicates by term/aliases), `update`, `delete` |
 | `scripts/build.mjs` | Fetch cards (or read `--input`), encrypt, write `_site/` |
-| `site/` | Single-page front end: home (word of the day, stats, recent, calendar), browse, study (flashcards), card detail |
+| `site/` | Single-page front end: home (word of the day, stats, favorites, recent, calendar), browse (favorites, time / kind / tag filters, sort, search, export), study (flashcards), card detail |
 | `data/sample-cards.json` | Fake sample cards for local preview |
 | `.github/workflows/pages.yml` | Hourly / dispatch / push build and Pages deploy |
 
@@ -56,11 +56,14 @@ After editing `Code.gs`, use **Deploy → Manage deployments → Edit → New ve
 
 ### Columns
 
-`id, term, aliases, kind (word/phrase/idiom/usage), pos, ipa, meaning_zh, meaning_en, usage, examples, synonyms, antonyms, collocations, source, source_url, context, tags, note, status (new/learning/known), starred, created_at, updated_at`
+`id, term, aliases, kind (word/phrase/idiom/usage/group), pos, ipa, meaning_zh, meaning_en, entries, usage, examples, synonyms, antonyms, collocations, source, source_url, context, tags, note, status (new/learning/known), starred, created_at, updated_at`
 
-List fields (`aliases, examples, synonyms, antonyms, collocations, tags`) are newline-separated inside one cell; the API accepts and returns arrays.
+List fields (`aliases, entries, examples, synonyms, antonyms, collocations, tags`) are newline-separated inside one cell; the API accepts and returns arrays.
 `add` with a term that matches an existing term or alias merges into that card (lists are unioned, non-empty text replaces).
-Review progress is kept in each browser, not in the Sheet.
+Review progress and favorites (★) are kept in each browser, not in the Sheet (the Sheet's `starred` is only the initial value).
+
+`kind = group` is a Chinese-first card: `term` is a Chinese headword (e.g. 出局), `entries` lists English expressions, one per line, optionally `english — 中文说明`; examples are optional. `add` sets this kind automatically when the term contains Chinese.
+Tags are English register / topic labels (spoken, written, research, cooking, paper, book…); `source` is the specific origin (paper title, book name) shown under the context, not a filter.
 
 ### 2. GitHub
 

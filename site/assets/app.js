@@ -4,7 +4,7 @@
   var R = document.documentElement, APP = document.getElementById('app');
   var PASS = 'ec-pass', STARS = 'ecStarsV1', PROG = 'ecProgressV1', LOG = 'ecStudyLogV1', ACCENT = 'ec-accent';
   var BOX_DAYS = [0, 1, 2, 4, 8, 16, 32];
-  var KIND_C = { word: '#3b82f6', phrase: '#22c55e', idiom: '#f59e0b', usage: '#ec4899' };
+  var KIND_C = { word: '#3b82f6', phrase: '#22c55e', idiom: '#f59e0b', usage: '#ec4899', group: '#8b5cf6' };
   var PALETTE = ['#8b5cf6', '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#f97316', '#6366f1', '#84cc16', '#14b8a6', '#d946ef'];
 
   var I = {
@@ -14,14 +14,16 @@
       'k.total': '卡片总数', 'k.week': '本周新增', 'k.streak': '连续学习天数', 'k.due': '待复习',
       recent: '最近添加', all: '全部', 'due.title': '该复习了', 'due.n': '张卡片到期', 'due.none': '今天没有到期的卡片', 'due.go': '去复习',
       kinds: '类型', tags: '标签', months: '按月浏览', 'month.n': '本月新增', 'cal.hint': '点日期看当天新增的卡片',
-      word: '单词', phrase: '短语', idiom: '习语', usage: '用法',
-      'v.title': '仅词条', 'v.one': '一句话', 'v.full': '完整', starred: '难词', 'cards.n': '张', clear: '清除筛选', 'empty.list': '没有符合条件的卡片',
-      'f.usage': '用法', 'f.examples': '例句', 'f.synonyms': '近义词', 'f.antonyms': '反义词', 'f.collocations': '常见搭配', 'f.context': '我遇到它的地方',
+      word: '单词', phrase: '短语', idiom: '习语', usage: '用法', group: '中→英',
+      'v.title': '仅词条', 'v.one': '一句话', 'v.full': '完整', starred: '收藏', 'cards.n': '张', clear: '清除筛选', 'empty.list': '没有符合条件的卡片',
+      'f.entries': '英文说法', 'f.usage': '用法', 'f.examples': '例句', 'f.synonyms': '近义词', 'f.antonyms': '反义词', 'f.collocations': '常见搭配', 'f.context': '我遇到它的地方',
       'f.note': '笔记', 'f.en': '英文释义', added: '添加于', back: '返回',
-      's.all': '全部卡片', 's.due': '只看到期', 's.star': '只看难词', shuffle: '打乱', 'flip.hint': '点击或按空格翻面', 'g0': '不认识', 'g1': '模糊', 'g2': '认识',
+      's.all': '全部卡片', 's.due': '只看到期', 's.star': '只学收藏', shuffle: '打乱', 'flip.hint': '点击或按空格翻面', 'g0': '不认识', 'g1': '模糊', 'g2': '认识',
       'g0s': '今天再看', 'g1s': '明天再看', 'g2s': '间隔加长', keys: '← → 翻页 · 空格翻面 · 1 2 3 评分', 'done.title': '这一组学完了', 'done.sub': '本次评分',
       'done.again': '再来一遍', exportc: '导出 CSV', exporta: '导出 Anki', copied: '已导出', 'notfound': '没有找到这张卡片', 'empty.all': '还没有卡片。跟 ChatGPT 说一个词，它会帮你记下来。',
-      accent: '发音'
+      accent: '发音', when: '时间', 'w.week': '本周', 'w.last': '上周',
+      'sort.new': '最新', 'sort.old': '最早', 'sort.az': 'A–Z', 'fav.all': '全部', 'fav.only': '★ 收藏', 'fav.title': '收藏', 'fav.n': '张收藏',
+      'fav.browse': '看收藏', 'fav.study': '学收藏', 'fav.none': '还没有收藏。点卡片右上角的 ☆ 收藏。', 'zh.head': '中文'
   };
   function t(k) { return I[k] || k; }
   function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
@@ -176,12 +178,31 @@
   }
   function starBtn(c) { var on = isStar(c); return '<button class="star' + (on ? ' on' : '') + '" data-id="' + esc(c.id) + '" aria-label="star">' + (on ? '★' : '☆') + '</button>'; }
   function list(v) { return Array.isArray(v) ? v.filter(Boolean) : String(v || '').split('\n').filter(Boolean); }
-  function oneLine(c) { return c.meaning_en || list(c.examples)[0] || c.usage || ''; }
+  function isZh(c) { return c.kind === 'group' || /[\u4e00-\u9fff]/.test(c.term || ''); }
+  /* entries: one English expression per line, optionally "english — 中文说明" */
+  function entries(c) {
+    return list(c.entries).map(function (x) {
+      var m = x.match(/^(.*?)\s+[—–-]{1,2}\s+(.*)$/);
+      return m ? { en: m[1].trim(), zh: m[2].trim() } : { en: x.trim(), zh: '' };
+    });
+  }
+  function entriesHTML(c, sayIt) {
+    var e = entries(c);
+    return e.length ? '<ul class="ents">' + e.map(function (x) {
+      return '<li><b>' + esc(x.en) + '</b>' + (sayIt ? ' ' + sayBtn(x.en) : '') + (x.zh ? ' <span class="mute">' + esc(x.zh) + '</span>' : '') + '</li>';
+    }).join('') + '</ul>' : '';
+  }
+  function enLine(c) { return entries(c).map(function (x) { return x.en; }).join(' · '); }
+  function oneLine(c) { return isZh(c) ? enLine(c) : c.meaning_en || list(c.examples)[0] || c.usage || ''; }
+  function searchText(c) {
+    return [c.term, list(c.aliases).join(' '), c.meaning_zh, c.meaning_en, list(c.entries).join(' '), list(c.examples).join(' '), c.usage, list(c.tags).join(' '), c.note, c.context, c.source].join(' ').toLowerCase();
+  }
   function fieldsHTML(c, opts) {
     opts = opts || {};
     var f = [];
     function add(k, body) { if (body) f.push('<div class="fld"><b>' + t(k) + '</b>' + body + '</div>'); }
     if (opts.en) add('f.en', c.meaning_en ? '<div>' + esc(c.meaning_en) + '</div>' : '');
+    add('f.entries', entriesHTML(c, opts.say));
     add('f.examples', list(c.examples).length ? '<ul>' + list(c.examples).map(function (x) { return '<li>' + esc(x) + ' ' + (opts.say ? sayBtn(x) : '') + '</li>'; }).join('') + '</ul>' : '');
     add('f.usage', c.usage ? '<div>' + esc(c.usage) + '</div>' : '');
     add('f.collocations', list(c.collocations).length ? '<div class="chips">' + list(c.collocations).map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div>' : '');
@@ -196,10 +217,10 @@
     return '<article class="ci">' + starBtn(c) +
       '<div class="h"><a class="t" href="#/card/' + encodeURIComponent(c.id) + '">' + esc(c.term) + '</a>' +
       (c.pos ? '<span class="pos">' + esc(c.pos) + '</span>' : '') + (c.ipa ? '<span class="ipa">' + esc(c.ipa) + '</span>' : '') +
-      '<span class="z">' + esc(c.meaning_zh) + '</span></div>' +
-      '<p class="one">' + esc(oneLine(c)) + '</p>' +
+      '<span class="z">' + esc(isZh(c) ? enLine(c) : c.meaning_zh) + '</span></div>' +
+      '<p class="one">' + esc(isZh(c) ? c.meaning_zh || '' : oneLine(c)) + '</p>' +
       '<div class="full">' + fieldsHTML(c, { en: true }) +
-      '<div class="meta"><span class="kindb">' + t(c.kind) + '</span>' + (c.source ? '<span>' + esc(c.source) + '</span>' : '') + '<span>' + esc(c.day) + '</span></div></div></article>';
+      '<div class="meta"><span class="kindb">' + t(c.kind) + '</span><span>' + esc(c.day) + '</span></div></div></article>';
   }
   function viewSeg() {
     return '<div class="seg">' + ['title', 'one', 'full'].map(function (v) { return '<button data-set="view:' + v + '">' + t('v.' + v) + '</button>'; }).join('') + '</div>';
@@ -248,8 +269,9 @@
     var h = '<section class="hero"><div class="wod panel"><div>' +
       '<div class="eyebrow">' + t('wod') + ' · ' + today + '</div>' +
       '<h1 class="term">' + esc(w.term) + '</h1>' +
+      (isZh(w) ? '<p class="mz">' + esc(enLine(w)) + '</p><p class="me">' + esc(w.meaning_zh || '') + '</p>' :
       '<div class="pron">' + (w.pos ? '<span class="pos">' + esc(w.pos) + '</span>' : '') + (w.ipa ? '<span>' + esc(w.ipa) + '</span>' : '') + sayBtn(w.term) + '</div>' +
-      '<p class="mz">' + esc(w.meaning_zh) + '</p><p class="me">' + esc(w.meaning_en) + '</p>' +
+      '<p class="mz">' + esc(w.meaning_zh) + '</p><p class="me">' + esc(w.meaning_en) + '</p>') +
       '<div class="acts"><a class="btn" href="#/study">' + t('wod.study') + ' →</a><a class="ghost" href="#/card/' + encodeURIComponent(w.id) + '">' + t('wod.detail') + '</a></div></div>' +
       '<div class="side">' + (ex ? '<blockquote>' + esc(ex) + ' ' + sayBtn(ex) + '</blockquote>' : '') +
       (list(w.collocations).length ? '<div class="chips">' + list(w.collocations).slice(0, 4).map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div>' : '') +
@@ -264,9 +286,14 @@
       '<div class="sech"><h2>' + t('months') + '</h2></div><div id="months"></div></section>';
     h += '<aside class="homeside"><div class="panel duecta"><div><div class="eyebrow">' + t('due.title') + '</div><b>' +
       (due ? due + ' ' + t('due.n') : t('due.none')) + '</b></div>' + (due ? '<a class="btn" href="#/study?deck=due">' + t('due.go') + '</a>' : '') + '</div>' +
-      cloud('kinds', 'kind') + cloud('tags', 'tags') + '</aside></div>';
+      favPanel() + cloud('kinds', 'kind') + cloud('tags', 'tags') + '</aside></div>';
     APP.innerHTML = h;
     months();
+  }
+  function favPanel() {
+    var n = CARDS.filter(isStar).length;
+    return '<div class="panel duecta"><div><div class="eyebrow">' + t('fav.title') + '</div><b>' + n + ' ' + t('fav.n') + '</b></div>' +
+      (n ? '<span style="display:flex;gap:8px"><a class="ghost" href="#/browse?star=1">' + t('fav.browse') + '</a><a class="ghost" href="#/study?deck=star">' + t('fav.study') + '</a></span>' : '') + '</div>';
   }
   function cloud(title, key) {
     var c = counts(key);
@@ -302,30 +329,65 @@
     draw();
   }
 
-  /* ---- browse: list + filters + search ---- */
+  /* ---- browse: list + filters + search + sort ---- */
+  function weekStart(d) { var x = new Date(d + 'T12:00:00'); return addDays(d, -((x.getDay() + 6) % 7)); }
+  function whenOf(c) {
+    var today = ymd(), ws = weekStart(today);
+    if (c.day >= ws) return 'week';
+    if (c.day >= addDays(ws, -7)) return 'last';
+    return c.day.slice(0, 7);
+  }
+  function monthLabel(m) { return m.slice(0, 4) + ' 年 ' + (+m.slice(5, 7)) + ' 月'; }
+  var COLL = new Intl.Collator('en', { sensitivity: 'base', numeric: true });
+  var ZHCOLL = new Intl.Collator('zh-Hans-u-co-pinyin');
+  function azCmp(a, b) {
+    var za = isZh(a), zb = isZh(b);
+    if (za !== zb) return za ? 1 : -1;
+    return za ? ZHCOLL.compare(a.term, b.term) : COLL.compare(a.term, b.term);
+  }
+  function letterOf(c) { return isZh(c) ? t('zh.head') : 'A–Z'; }
+
   function browse(q) {
     if (!CARDS.length) { APP.innerHTML = emptyAll(); return; }
-    var st = { q: q.get('q') || '', tag: q.get('tag') || '', kind: q.get('kind') || '', star: q.get('star') === '1', day: q.get('day') || '' };
+    var st = { q: q.get('q') || '', tag: q.get('tag') || '', kind: q.get('kind') || '', star: q.get('star') === '1', day: q.get('day') || '',
+      when: q.get('when') || '', sort: q.get('sort') || 'new' };
     function href(patch) {
       var s = Object.assign({}, st, patch), p = new URLSearchParams();
-      ['q', 'tag', 'kind', 'day'].forEach(function (k) { if (s[k]) p.set(k, s[k]); });
+      ['q', 'tag', 'kind', 'day', 'when'].forEach(function (k) { if (s[k]) p.set(k, s[k]); });
       if (s.star) p.set('star', '1');
+      if (s.sort !== 'new') p.set('sort', s.sort);
       var x = p.toString();
       return '#/browse' + (x ? '?' + x : '');
     }
     function group(label, chipsHTML) { return chipsHTML ? '<div class="fgroup"><span class="flabel">' + label + '</span><div class="filters">' + chipsHTML + '</div></div>' : ''; }
-    var filters = group(t('kinds'), counts('kind').map(function (x) { return chip(t(x[0]), href({ kind: st.kind === x[0] ? '' : x[0] }), colorOf(x[0]), x[1], st.kind === x[0]); }).join('') +
-        chip('★ ' + t('starred'), href({ star: !st.star }), '#f5b400', null, st.star)) +
+    var wc = {};
+    CARDS.forEach(function (c) {
+      var w = whenOf(c), m = c.day.slice(0, 7);
+      if (w === 'week' || w === 'last') wc[w] = (wc[w] || 0) + 1;
+      wc[m] = (wc[m] || 0) + 1;
+    });
+    var months = Object.keys(wc).filter(function (k) { return /^\d{4}-\d{2}$/.test(k); }).sort().reverse();
+    var whenChips = [['week', t('w.week')], ['last', t('w.last')]].filter(function (x) { return wc[x[0]]; })
+      .concat(months.map(function (m) { return [m, monthLabel(m)]; }))
+      .map(function (x) { return chip(x[1], href({ when: st.when === x[0] ? '' : x[0], day: '' }), '#64748b', wc[x[0]], st.when === x[0]); }).join('');
+    var filters = group(t('when'), whenChips) +
+      group(t('kinds'), counts('kind').map(function (x) { return chip(t(x[0]), href({ kind: st.kind === x[0] ? '' : x[0] }), colorOf(x[0]), x[1], st.kind === x[0]); }).join('')) +
       group(t('tags'), counts('tags').map(function (x) { return chip(x[0], href({ tag: st.tag === x[0] ? '' : x[0] }), colorOf(x[0]), x[1], st.tag === x[0]); }).join(''));
-    var any = st.tag || st.kind || st.star || st.day;
-    APP.innerHTML = '<div class="rhead"><h1 class="rtitle">' + t('nav.browse') + (st.day ? ' · ' + esc(st.day) : '') + '</h1>' +
-      '<div class="count"><b id="count">0</b> ' + t('cards.n') + (any ? ' · <a class="more" href="#/browse">' + t('clear') + '</a>' : '') +
+    var any = st.tag || st.kind || st.day || st.when;
+    var nFav = CARDS.filter(isStar).length;
+    APP.innerHTML = '<div class="rhead"><div class="rtop"><h1 class="rtitle">' + t('nav.browse') + (st.day ? ' · ' + esc(st.day) : '') + '</h1>' +
+      '<div class="seg favseg"><a class="' + (st.star ? '' : 'on') + '" href="' + href({ star: false }) + '">' + t('fav.all') + ' <b>' + CARDS.length + '</b></a>' +
+      '<a class="' + (st.star ? 'on' : '') + '" href="' + href({ star: true }) + '">' + t('fav.only') + ' <b>' + nFav + '</b></a></div></div>' +
+      '<div class="count"><b id="count">0</b> ' + t('cards.n') + (any ? ' · <a class="more" href="' + href({ tag: '', kind: '', day: '', when: '' }) + '">' + t('clear') + '</a>' : '') +
       '<span class="exports"><button class="ghost" id="excsv">' + t('exportc') + '</button><button class="ghost" id="exanki">' + t('exporta') + '</button></span></div>' +
       filters + '</div>' +
       '<div class="toolbar"><div class="tbrow"><label class="qbox"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>' +
-      '<input id="q" type="search" placeholder="' + esc(t('search.ph')) + '" value="' + esc(st.q) + '" autocomplete="off"></label>' + viewSeg() + '</div></div>' +
+      '<input id="q" type="search" placeholder="' + esc(t('search.ph')) + '" value="' + esc(st.q) + '" autocomplete="off"></label>' +
+      '<div class="seg sortseg">' + ['new', 'old', 'az'].map(function (k) { return '<button data-sort="' + k + '" class="' + (st.sort === k ? 'on' : '') + '">' + t('sort.' + k) + '</button>'; }).join('') + '</div>' +
+      viewSeg() + '</div></div>' +
       '<div class="cl" id="cl"></div>';
     var input = document.getElementById('q'), shown = [];
+    function head(label) { return '<h3 class="gh">' + esc(label) + '</h3>'; }
     function draw() {
       st.q = input.value;
       var terms = st.q.toLowerCase().split(/\s+/).filter(Boolean);
@@ -334,17 +396,29 @@
         if (st.tag && list(c.tags).indexOf(st.tag) < 0) return false;
         if (st.day && c.day !== st.day) return false;
         if (st.star && !isStar(c)) return false;
+        if (st.when && (st.when.length === 7 ? c.day.slice(0, 7) : whenOf(c)) !== st.when) return false;
         if (!terms.length) return true;
-        var s = [c.term, list(c.aliases).join(' '), c.meaning_zh, c.meaning_en, list(c.examples).join(' '), c.usage, list(c.tags).join(' '), c.note, c.context].join(' ').toLowerCase();
+        var s = searchText(c);
         return terms.every(function (x) { return s.indexOf(x) >= 0; });
       });
-      if (terms.length) shown.sort(function (a, b) { return (b.term.toLowerCase().indexOf(terms[0]) === 0) - (a.term.toLowerCase().indexOf(terms[0]) === 0); });
-      document.getElementById('cl').innerHTML = shown.length ? shown.map(itemHTML).join('') : '<div class="empty">' + t('empty.list') + '</div>';
+      if (st.sort === 'az') shown.sort(azCmp);
+      else if (st.sort === 'old') shown.reverse();
+      if (terms.length && st.sort !== 'az') shown.sort(function (a, b) { return (b.term.toLowerCase().indexOf(terms[0]) === 0) - (a.term.toLowerCase().indexOf(terms[0]) === 0); });
+      var h = '', last = null;
+      shown.forEach(function (c) {
+        var g = st.sort === 'az' ? letterOf(c) : (function (w) { return w === 'week' ? t('w.week') : w === 'last' ? t('w.last') : monthLabel(w); })(whenOf(c));
+        if (g !== last && !terms.length) { h += head(g); last = g; }
+        h += itemHTML(c);
+      });
+      document.getElementById('cl').innerHTML = shown.length ? h : '<div class="empty">' + (st.star && !nFav ? t('fav.none') : t('empty.list')) + '</div>';
       document.getElementById('count').textContent = shown.length;
       history.replaceState(null, '', href({}));
     }
     var tm;
     input.addEventListener('input', function () { clearTimeout(tm); tm = setTimeout(draw, 100); });
+    $$('[data-sort]').forEach(function (b) {
+      b.onclick = function () { st.sort = b.dataset.sort; $$('[data-sort]').forEach(function (x) { x.classList.toggle('on', x === b); }); draw(); };
+    });
     document.getElementById('excsv').onclick = function () { exportCSV(shown); };
     document.getElementById('exanki').onclick = function () { exportAnki(shown); };
     draw();
@@ -352,7 +426,7 @@
   }
 
   /* ---- export ---- */
-  var EXPORT_COLS = ['term', 'kind', 'pos', 'ipa', 'meaning_zh', 'meaning_en', 'usage', 'examples', 'synonyms', 'antonyms', 'collocations', 'source', 'source_url', 'context', 'tags', 'note', 'created_at'];
+  var EXPORT_COLS = ['term', 'kind', 'pos', 'ipa', 'meaning_zh', 'meaning_en', 'entries', 'usage', 'examples', 'synonyms', 'antonyms', 'collocations', 'source', 'source_url', 'context', 'tags', 'note', 'created_at'];
   function download(name, text, type) {
     var a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([text], { type: type }));
@@ -370,6 +444,7 @@
     function clean(s) { return String(s || '').replace(/[\t\r\n]+/g, ' '); }
     var rows = ['#separator:tab', '#html:true', '#tags column:3'].concat(cards.map(function (c) {
       var back = '<b>' + esc(c.meaning_zh) + '</b><br>' + esc(c.meaning_en) +
+        (entries(c).length ? '<br>' + entries(c).map(function (x) { return esc(x.en) + (x.zh ? ' — ' + esc(x.zh) : ''); }).join('<br>') : '') +
         (list(c.examples).length ? '<br><br>' + list(c.examples).map(esc).join('<br>') : '') + (c.context ? '<br><br><i>' + esc(c.context) + '</i>' : '');
       var front = esc(c.term) + (c.ipa ? ' <small>' + esc(c.ipa) + '</small>' : '');
       return [clean(front), clean(back), list(c.tags).map(function (x) { return x.replace(/\s+/g, '_'); }).join(' ')].join('\t');
@@ -381,12 +456,12 @@
   function detail(id) {
     var c = BY[id];
     if (!c) { APP.innerHTML = '<div class="empty">' + t('notfound') + '</div>'; return; }
-    APP.innerHTML = '<a class="back" href="javascript:history.back()">← ' + t('back') + '</a>' +
+    APP.innerHTML = '<a class="backlink" href="javascript:history.back()">← ' + t('back') + '</a>' +
       '<article class="detail panel" style="position:relative"><div style="position:absolute;top:18px;right:18px">' + starBtn(c) + '</div>' +
       '<div class="eyebrow">' + t(c.kind) + '</div><h1 class="term">' + esc(c.term) + '</h1>' +
       '<div class="pron" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:var(--mut);font-family:var(--mono)">' +
-      (c.pos ? '<span class="pos">' + esc(c.pos) + '</span>' : '') + (c.ipa ? '<span>' + esc(c.ipa) + '</span>' : '') + sayBtn(c.term) + accentSeg() + '</div>' +
-      '<p class="mz">' + esc(c.meaning_zh) + '</p><p class="mute" style="margin:0">' + esc(c.meaning_en) + '</p>' +
+      (c.pos ? '<span class="pos">' + esc(c.pos) + '</span>' : '') + (c.ipa ? '<span>' + esc(c.ipa) + '</span>' : '') + (isZh(c) ? '' : sayBtn(c.term)) + accentSeg() + '</div>' +
+      (c.meaning_zh ? '<p class="mz">' + esc(c.meaning_zh) + '</p>' : '') + (c.meaning_en ? '<p class="mute" style="margin:0">' + esc(c.meaning_en) + '</p>' : '') +
       fieldsHTML(c, { say: true }) +
       '<div class="meta" style="margin-top:20px">' + (list(c.tags).length ? '<span class="tags">' + list(c.tags).map(function (x) { return chip(x, '#/browse?tag=' + encodeURIComponent(x), colorOf(x)); }).join('') + '</span>' : '') +
       '<span>' + t('added') + ' ' + esc(c.day) + '</span></div></article>';
@@ -413,7 +488,7 @@
       Object.keys(s).forEach(function (k) { if (s[k] && !(k === 'deck' && s[k] === 'all')) p.set(k, s[k]); });
       return '#/study' + (p.toString() ? '?' + p : '');
     }
-    var opts = [['all', t('s.all')], ['due', t('s.due')], ['star', t('s.star')]].map(function (o) {
+    var opts = [['all', t('s.all')], ['star', t('s.star')], ['due', t('s.due')]].map(function (o) {
       return '<option value="' + o[0] + '"' + (deckName === o[0] && !tag ? ' selected' : '') + '>' + o[1] + '</option>';
     }).join('') + counts('tags').map(function (x) { return '<option value="tag:' + esc(x[0]) + '"' + (tag === x[0] ? ' selected' : '') + '># ' + esc(x[0]) + ' (' + x[1] + ')</option>'; }).join('');
     APP.innerHTML = '<div class="study"><div class="sbar"><select id="deck">' + opts + '</select>' +
@@ -428,7 +503,7 @@
     var stage = document.getElementById('stage');
 
     function draw() {
-      if (!deck.length) { stage.innerHTML = '<div class="empty">' + (deckName === 'due' ? t('due.none') : t('empty.list')) + '</div>'; return; }
+      if (!deck.length) { stage.innerHTML = '<div class="empty">' + (deckName === 'due' ? t('due.none') : deckName === 'star' && !CARDS.some(isStar) ? t('fav.none') : t('empty.list')) + '</div>'; return; }
       if (idx >= deck.length) {
         stage.innerHTML = '<div class="done panel"><div class="eyebrow">' + t('done.sub') + '</div><h2>' + t('done.title') + '</h2>' +
           '<p class="mute">' + t('g0') + ' ' + tally[0] + ' · ' + t('g1') + ' ' + tally[1] + ' · ' + t('g2') + ' ' + tally[2] + '</p>' +
@@ -443,10 +518,11 @@
         '<div class="flash" id="flash"><div class="fin">' +
         '<div class="face front panel"><div style="position:absolute;top:12px;right:12px">' + starBtn(c) + '</div>' +
         '<h2 class="term">' + esc(c.term) + '</h2>' +
-        '<div class="pron" style="display:flex;gap:10px;align-items:center;color:var(--mut);font-family:var(--mono)">' + (c.ipa ? '<span>' + esc(c.ipa) + '</span>' : '') + sayBtn(c.term) + '</div>' +
+        (isZh(c) ? (c.meaning_zh ? '<div class="ctx" style="font-style:normal">' + esc(c.meaning_zh) + '</div>' : '') :
+        '<div class="pron" style="display:flex;gap:10px;align-items:center;color:var(--mut);font-family:var(--mono)">' + (c.ipa ? '<span>' + esc(c.ipa) + '</span>' : '') + sayBtn(c.term) + '</div>') +
         (c.context ? '<div class="ctx">“' + esc(c.context) + '”</div>' : '') + '<div class="hint">' + t('flip.hint') + '</div></div>' +
-        '<div class="face back panel"><div class="eyebrow">' + esc(c.pos || t(c.kind)) + '</div><h2 class="term">' + esc(c.term) + ' ' + sayBtn(c.term) + '</h2>' +
-        '<p class="mz">' + esc(c.meaning_zh) + '</p><p class="mute" style="margin:0">' + esc(c.meaning_en) + '</p>' +
+        '<div class="face back panel"><div class="eyebrow">' + esc(c.pos || t(c.kind)) + '</div><h2 class="term">' + esc(c.term) + ' ' + (isZh(c) ? '' : sayBtn(c.term)) + '</h2>' +
+        (isZh(c) ? '' : '<p class="mz">' + esc(c.meaning_zh) + '</p><p class="mute" style="margin:0">' + esc(c.meaning_en) + '</p>') +
         fieldsHTML(c, { say: true }) + '</div></div></div>' +
         '<div class="grade"><button class="g0" data-g="0">' + t('g0') + '<small>' + t('g0s') + '</small></button>' +
         '<button class="g1" data-g="1">' + t('g1') + '<small>' + t('g1s') + '</small></button>' +

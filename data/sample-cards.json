@@ -40,7 +40,8 @@
       "status": "learning",
       "starred": true,
       "created_at": "2026-10-08T17:20:00Z",
-      "updated_at": "2026-10-08T17:20:00Z"
+      "updated_at": "2026-10-08T17:20:00Z",
+      "entries": []
     },
     {
       "id": "run-into-d4e5f6",
@@ -81,7 +82,8 @@
       "status": "known",
       "starred": false,
       "created_at": "2026-10-15T20:02:00Z",
-      "updated_at": "2026-10-15T20:02:00Z"
+      "updated_at": "2026-10-15T20:02:00Z",
+      "entries": []
     },
     {
       "id": "the-elephant-in-the-room-0a1b2c",
@@ -115,7 +117,8 @@
       "status": "new",
       "starred": false,
       "created_at": "2026-10-21T18:45:00Z",
-      "updated_at": "2026-10-21T18:45:00Z"
+      "updated_at": "2026-10-21T18:45:00Z",
+      "entries": []
     },
     {
       "id": "nuance-3c4d5e",
@@ -155,7 +158,8 @@
       "status": "learning",
       "starred": true,
       "created_at": "2026-10-27T03:10:00Z",
-      "updated_at": "2026-10-27T03:10:00Z"
+      "updated_at": "2026-10-27T03:10:00Z",
+      "entries": []
     },
     {
       "id": "touch-base-6f7a8b",
@@ -194,7 +198,8 @@
       "status": "known",
       "starred": false,
       "created_at": "2026-11-01T22:30:00Z",
-      "updated_at": "2026-11-01T22:30:00Z"
+      "updated_at": "2026-11-01T22:30:00Z",
+      "entries": []
     },
     {
       "id": "ubiquitous-9c0d1e",
@@ -236,7 +241,8 @@
       "status": "new",
       "starred": false,
       "created_at": "2026-11-03T16:05:00Z",
-      "updated_at": "2026-11-03T16:05:00Z"
+      "updated_at": "2026-11-03T16:05:00Z",
+      "entries": []
     },
     {
       "id": "for-what-its-worth-2f3a4b",
@@ -271,7 +277,8 @@
       "status": "new",
       "starred": false,
       "created_at": "2026-11-04T19:40:00Z",
-      "updated_at": "2026-11-04T19:40:00Z"
+      "updated_at": "2026-11-04T19:40:00Z",
+      "entries": []
     },
     {
       "id": "pull-off-5c6d7e",
@@ -312,7 +319,83 @@
       "status": "learning",
       "starred": false,
       "created_at": "2026-11-05T15:12:00Z",
-      "updated_at": "2026-11-05T15:12:00Z"
+      "updated_at": "2026-11-05T15:12:00Z",
+      "entries": []
+    },
+    {
+      "id": "chu-ju-7a8b9c",
+      "term": "出局",
+      "aliases": [],
+      "kind": "group",
+      "pos": "",
+      "ipa": "",
+      "meaning_zh": "比赛、竞争、项目里被淘汰或被排除在外的各种说法",
+      "meaning_en": "",
+      "entries": [
+        "be out — 一般说法（棒球、板球里的出局）",
+        "strike out — 棒球三振出局；也指尝试失败",
+        "be knocked out — 淘汰赛里被淘汰",
+        "be eliminated — 正式说法，比赛 / 选拔中被淘汰",
+        "be voted off — 真人秀里被投票淘汰",
+        "be out of the running — 已经没有机会胜出",
+        "be cut — 被裁掉、被从名单里去掉"
+      ],
+      "usage": "",
+      "examples": [],
+      "synonyms": [],
+      "antonyms": [],
+      "collocations": [],
+      "source": "",
+      "source_url": "",
+      "context": "",
+      "tags": [
+        "sports",
+        "spoken"
+      ],
+      "note": "想说\"出局\"时按场合挑。",
+      "status": "new",
+      "starred": true,
+      "created_at": "2026-11-05T21:30:00Z",
+      "updated_at": "2026-11-05T21:30:00Z"
+    },
+    {
+      "id": "huo-hou-1d2e3f",
+      "term": "火候",
+      "aliases": [],
+      "kind": "group",
+      "pos": "",
+      "ipa": "",
+      "meaning_zh": "做饭时控制火力大小和时间",
+      "meaning_en": "",
+      "entries": [
+        "low heat — 小火",
+        "medium-high heat — 中大火",
+        "simmer — 小火慢炖",
+        "bring to a boil — 烧开",
+        "sear — 大火快煎、煎封",
+        "until golden brown — 煎到金黄",
+        "overcooked / undercooked — 过火 / 欠火"
+      ],
+      "usage": "",
+      "examples": [
+        "Simmer over low heat for 20 minutes.",
+        "Sear the steak on high heat, then lower the heat."
+      ],
+      "synonyms": [],
+      "antonyms": [],
+      "collocations": [],
+      "source": "Salt, Fat, Acid, Heat (book)",
+      "source_url": "",
+      "context": "",
+      "tags": [
+        "cooking",
+        "book"
+      ],
+      "note": "",
+      "status": "new",
+      "starred": false,
+      "created_at": "2026-10-30T02:00:00Z",
+      "updated_at": "2026-10-30T02:00:00Z"
     }
   ]
 }
