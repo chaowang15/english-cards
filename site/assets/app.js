@@ -42,7 +42,7 @@
   function toast(msg) {
     var el = document.querySelector('.toast') || document.body.appendChild(Object.assign(document.createElement('div'), { className: 'toast' }));
     el.textContent = msg; el.classList.add('on');
-    clearTimeout(el._h); el._h = setTimeout(function () { el.classList.remove('on'); }, 1800);
+    clearTimeout(el._h); el._h = setTimeout(function () { el.classList.remove('on'); }, Math.min(8000, Math.max(1800, msg.length * 90)));
   }
 
   /* ---- scheme / view (same pattern as hackernews hn2.js) ---- */
@@ -221,7 +221,7 @@
   }
   function starBtn(c) { var on = isStar(c); return '<button class="star' + (on ? ' on' : '') + '" data-id="' + esc(c.id) + '" aria-label="star">' + (on ? '★' : '☆') + '</button>'; }
   function list(v) { return Array.isArray(v) ? v.filter(Boolean) : String(v || '').split('\n').filter(Boolean); }
-  var HIDDEN_TAGS = ['notion-import'];  /* bookkeeping tags kept in the Sheet but not shown */
+  var HIDDEN_TAGS = ['notion-import', 'ai-filled'];  /* bookkeeping tags kept in the Sheet but not shown */
   function tagsOf(c) { return list(c.tags).filter(function (x) { return HIDDEN_TAGS.indexOf(x) < 0; }); }
   function isZh(c) { return c.kind === 'group' || /[\u4e00-\u9fff]/.test(c.term || ''); }
   /* entries: one English expression per line, optionally "english — 中文说明" */
@@ -695,7 +695,7 @@
     btn.classList.add('busy');
     var before = {};
     CARDS.forEach(function (c) { before[c.id] = c.updated_at; });
-    fetch(api.url + '?key=' + encodeURIComponent(api.key) + '&action=get', { cache: 'no-store' })
+    fetch(api.url + '?key=' + encodeURIComponent(api.key) + '&action=get&complete=1', { cache: 'no-store' })
       .then(function (r) { return r.json(); })
       .then(function (j) {
         if (!j.ok) throw new Error(j.error || 'Sheet error');
@@ -704,7 +704,10 @@
         store(CACHE, JSON.stringify({ fetched: new Date().toISOString(), cards: j.cards }));
         setCards(j.cards);
         if (parse().path.indexOf('study') !== 0) { var y = window.scrollY; route(); window.scrollTo(0, y); }
-        toast(added || changed ? '已同步：新增 ' + added + ' 张，更新 ' + changed + ' 张' : '已是最新，共 ' + j.cards.length + ' 张');
+        var msg = added || changed ? '已同步：新增 ' + added + ' 张，更新 ' + changed + ' 张' : '已是最新，共 ' + j.cards.length + ' 张';
+        if (j.completed && j.completed.length) msg += '；自动补全：' + j.completed.join('、');
+        if (j.pending) msg += '；还有 ' + j.pending + ' 个词待补全' + (j.completeError ? '（' + j.completeError + '）' : '，再点一次同步');
+        toast(msg);
         return Sync.run();
       })
       .catch(function (e) { toast('同步失败：' + e.message); })

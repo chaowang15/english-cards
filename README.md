@@ -88,6 +88,8 @@ Optional instant rebuilds: create a fine-grained token with *Contents: read and 
 
 ## Updating and syncing
 
+- **Auto-complete hand-added words**: when 同步 runs, rows that have a term but miss core content (Chinese meaning, or examples; English entries for Chinese headwords) are filled by OpenAI (`OPENAI_API_KEY` in Script Properties, model `OPENAI_MODEL`, default `gpt-5-mini`; at most 8 per click). Only empty cells are filled; filled cards get the hidden tag `ai-filled`. Complete cards never call the model, and scheduled builds never do. A word typed into the `id` column is moved to `term`.
+
 - **同步 button** (top bar): reads the Sheet directly in the browser (the API URL and key are inside the encrypted payload) and caches the cards on the device, then syncs favorites and review progress. Use it after editing the Sheet by hand or through ChatGPT's own Google connector.
 - **Rebuilds**: writes through the API send `repository_dispatch` (about a minute); the hourly schedule catches everything else.
 - **Favorites / review progress across devices**: open `?sync` (or 本机设置 in the footer), paste a GitHub token with only the `gist` scope once per device; data goes to a private gist `english-cards-sync.json`.

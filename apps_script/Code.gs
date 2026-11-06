@@ -35,7 +35,7 @@ function handle_(req) {
   if (!key || req.key !== key) return out_({ ok: false, error: 'unauthorized' });
   try {
     switch (req.action) {
-      case 'get': return out_({ ok: true, cards: withLock_(fillMissing_).map(toPublic_) });
+      case 'get': return out_(getCards_(req));
       case 'search': return out_(search_(req));
       case 'add': return out_(locked_(function () { return add_(req.card || {}); }));
       case 'update': return out_(locked_(function () { return update_(req); }));
@@ -220,8 +220,45 @@ function remove_(req) {
   return { ok: true, deleted: String(old.id) };
 }
 
+/**
+ * get: {complete?: '1'}. With complete=1 (the site's 同步 button) cards missing core content are
+ * filled by the model first; builds call get without it, so they never use the model.
+ */
+function getCards_(req) {
+  var res = { ok: true };
+  if (String(req.complete) === '1') {
+    var c = completeMissing_();
+    res.completed = c.done;
+    res.pending = c.pending;
+    if (c.error) res.completeError = c.error;
+  }
+  res.cards = withLock_(fillMissing_).map(toPublic_);
+  return res;
+}
+
+/** Words typed into the id column (A) instead of term (B) are moved over. */
+function fixMisplaced_() {
+  var sh = sheet_(), h = header_(sh), n = sh.getLastRow() - 1;
+  if (n <= 0) return;
+  var iId = h.indexOf('id'), iTerm = h.indexOf('term');
+  var rng = sh.getRange(2, 1, n, h.length), rows = rng.getValues(), changed = false;
+  rows.forEach(function (r) {
+    var id = String(r[iId] || '').trim();
+    if (String(r[iTerm] || '').trim() || !id || looksLikeId_(id)) return;
+    r[iTerm] = id;
+    r[iId] = '';
+    changed = true;
+  });
+  if (changed) rng.setValues(rows);
+}
+
+function looksLikeId_(s) {
+  return /^(notion-|legacy-|card-)/.test(s) || /-[0-9a-f]{6,8}$/.test(s) || /-\d{8}$/.test(s);
+}
+
 /** Rows typed or pasted by hand may lack id / kind / status / created_at: fill and save them. */
 function fillMissing_() {
+  fixMisplaced_();
   var cards = readAll_(), sh = null, h = null, now = new Date().toISOString();
   cards.forEach(function (o) {
     if (String(o.id).trim() && String(o.created_at).trim() && KINDS.indexOf(o.kind) >= 0 && STATUSES.indexOf(o.status) >= 0) return;
@@ -234,6 +271,114 @@ function fillMissing_() {
     writeRow_(sh, h, o._row, o);
   });
   return cards;
+}
+
+/* ---------- auto-complete hand-added words (only when core content is missing) ---------- */
+
+var COMPLETE_LIMIT = 8;  // per 同步 click; keeps one call well inside the Apps Script time limit
+
+function isGroupTerm_(o) { return o.kind === 'group' || /[\u4e00-\u9fff]/.test(String(o.term || '')); }
+
+/** Core content = term + Chinese meaning + examples (Chinese-first cards: English entries instead of examples). */
+function isIncomplete_(o) {
+  if (!String(o.term || '').trim()) return false;
+  if (!String(o.meaning_zh || '').trim()) return true;
+  return isGroupTerm_(o) ? !list_(o.entries).length : !list_(o.examples).length;
+}
+
+function completeMissing_() {
+  var key = PropertiesService.getScriptProperties().getProperty('OPENAI_API_KEY');
+  withLock_(fillMissing_);
+  var todo = readAll_().filter(isIncomplete_);
+  if (!todo.length) return { done: [], pending: 0 };
+  if (!key) return { done: [], pending: todo.length, error: 'OPENAI_API_KEY is not set' };
+  var batch = todo.slice(0, COMPLETE_LIMIT), filled;
+  try {
+    filled = callModel_(key, batch);
+  } catch (err) {
+    return { done: [], pending: todo.length, error: String(err && err.message || err) };
+  }
+  var done = withLock_(function () {
+    var sh = sheet_(), h = header_(sh), now = new Date().toISOString(), out = [];
+    var fresh = {};
+    readAll_().forEach(function (o) { fresh[String(o.id)] = o; });
+    batch.forEach(function (b, i) {
+      var o = fresh[String(b.id)], f = filled[i];
+      if (!o || !f || !isIncomplete_(o)) return;
+      Object.keys(f).forEach(function (k) {
+        if (COLUMNS.indexOf(k) < 0 || k === 'term') return;
+        var empty = LIST_FIELDS.indexOf(k) >= 0 ? !list_(o[k]).length : !String(o[k] || '').trim();
+        if (k === 'kind' && KINDS.indexOf(f.kind) >= 0 && (o.kind === 'word' || o.kind === 'phrase' || empty)) empty = true;
+        if (empty) o[k] = cell_(k, f[k]);
+      });
+      o.tags = union_(o.tags, ['ai-filled']).join('\n');
+      o.updated_at = now;
+      writeRow_(sh, h, o._row, o);
+      out.push(String(o.term));
+    });
+    return out;
+  });
+  if (done.length) dispatch_();
+  return { done: done, pending: Math.max(0, todo.length - done.length) };
+}
+
+var CARD_SCHEMA = {
+  type: 'object', additionalProperties: false,
+  required: ['kind', 'pos', 'ipa', 'meaning_zh', 'meaning_en', 'entries', 'usage', 'examples', 'synonyms', 'collocations', 'tags'],
+  properties: {
+    kind: { type: 'string', enum: ['word', 'phrase', 'idiom', 'usage', 'group'] },
+    pos: { type: 'string' }, ipa: { type: 'string' },
+    meaning_zh: { type: 'string' }, meaning_en: { type: 'string' },
+    entries: { type: 'array', items: { type: 'string' } }, usage: { type: 'string' },
+    examples: { type: 'array', items: { type: 'string' } },
+    synonyms: { type: 'array', items: { type: 'string' } }, collocations: { type: 'array', items: { type: 'string' } },
+    tags: { type: 'array', items: { type: 'string' } }
+  }
+};
+
+var COMPLETE_PROMPT = [
+  'You fill in vocabulary cards for a Chinese-speaking English learner. For each input card, return one completed card, in the same order.',
+  'Rules:',
+  '- kind: word / phrase / idiom / usage for an English term; group when the term is Chinese (a Chinese headword collecting several English expressions).',
+  '- meaning_zh: one short Chinese definition (several senses separated by "；"), no English inside.',
+  '- meaning_en: one concise English definition. For group cards use "".',
+  '- examples: 2 natural, everyday English example sentences that use the term; English only, no translations. For group cards 0-2 examples.',
+  '- entries: only for group cards — 3-8 English expressions, each "english — 简短中文说明". Otherwise [].',
+  '- pos: e.g. "n.", "v.", "adj.", "phr. v.", "idiom"; "" for group. ipa: American IPA for single English words, else "".',
+  '- usage: one short Chinese note on usage, register or common mistakes, or "".',
+  '- synonyms, collocations: up to 4 each, English; may be [].',
+  '- tags: 1-3 lowercase English labels for register or topic (e.g. spoken, written, business, work, research, tech, cooking, emotion, daily, life).',
+  '- Keep any information the input already has; do not invent sources or personal notes.'
+].join('\n');
+
+/** One Responses API call for the whole batch; returns an array aligned with `cards`. */
+function callModel_(key, cards) {
+  var p = PropertiesService.getScriptProperties();
+  var model = p.getProperty('OPENAI_MODEL') || 'gpt-5-mini';
+  var input = cards.map(function (o) {
+    return { term: String(o.term), meaning_zh: String(o.meaning_zh || ''), meaning_en: String(o.meaning_en || ''),
+      examples: list_(o.examples), entries: list_(o.entries), context: String(o.context || '') };
+  });
+  var body = {
+    model: model,
+    input: COMPLETE_PROMPT + '\n\nInput cards (JSON):\n' + JSON.stringify(input),
+    text: { format: { type: 'json_schema', name: 'cards', strict: true, schema: {
+      type: 'object', additionalProperties: false, required: ['cards'],
+      properties: { cards: { type: 'array', items: CARD_SCHEMA } } } } }
+  };
+  var res = UrlFetchApp.fetch('https://api.openai.com/v1/responses', {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    headers: { Authorization: 'Bearer ' + key }, payload: JSON.stringify(body)
+  });
+  var code = res.getResponseCode(), j = JSON.parse(res.getContentText() || '{}');
+  if (code !== 200) throw new Error('OpenAI ' + code + ': ' + (j.error && j.error.message || '').slice(0, 160));
+  var text = '';
+  (j.output || []).forEach(function (o) {
+    (o.content || []).forEach(function (c) { if (c.type === 'output_text') text += c.text; });
+  });
+  var cardsOut = JSON.parse(text).cards || [];
+  if (cardsOut.length !== cards.length) throw new Error('model returned ' + cardsOut.length + ' cards for ' + cards.length);
+  return cardsOut;
 }
 
 /** search: {q, limit?} — substring match over term, aliases, meanings, examples, tags. */
