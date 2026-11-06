@@ -282,6 +282,7 @@ function isGroupTerm_(o) { return o.kind === 'group' || /[\u4e00-\u9fff]/.test(S
 /** Core content = term + Chinese meaning + examples (Chinese-first cards: English entries instead of examples). */
 function isIncomplete_(o) {
   if (!String(o.term || '').trim()) return false;
+  if (list_(o.tags).indexOf('ai-filled') >= 0) return false;  // one attempt per card, so a bad answer never repeats the cost
   if (!String(o.meaning_zh || '').trim()) return true;
   return isGroupTerm_(o) ? !list_(o.entries).length : !list_(o.examples).length;
 }

@@ -191,12 +191,35 @@
   /* ---- pronunciation via the browser's speechSynthesis ---- */
   var SAY_ICON = '<svg class="ico" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
   function accent() { return localStorage.getItem(ACCENT) || 'en-US'; }
+  /* Rank the device's voices: neural / premium / Siri / Google first, novelty voices out. */
+  var VOICE = 'ec-voice';
+  var NOVELTY = /^(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Junior|Ralph|Fred|Kathy|Princess|Grandma|Grandpa|Eddy|Flo|Reed|Rocko|Sandy|Shelley|Deranged|Hysterical|Pipe Organ)\b/i;
+  function voiceScore(v) {
+    var n = v.name, sc = 0;
+    if (NOVELTY.test(n)) return -100;
+    if (/natural|neural/i.test(n)) sc += 60;
+    if (/premium/i.test(n)) sc += 50;
+    if (/enhanced|siri/i.test(n)) sc += 40;
+    if (/google/i.test(n)) sc += 30;
+    if (!v.localService) sc += 5;
+    return sc;
+  }
+  function englishVoices() {
+    return (window.speechSynthesis ? speechSynthesis.getVoices() : []).filter(function (v) { return /^en[-_]/i.test(v.lang); })
+      .sort(function (a, b) { return voiceScore(b) - voiceScore(a) || a.name.localeCompare(b.name); });
+  }
+  function pickVoice() {
+    var all = englishVoices(), want = localStorage.getItem(VOICE), lang = accent();
+    var chosen = want && all.filter(function (v) { return v.name === want; })[0];
+    if (chosen) return chosen;
+    return all.filter(function (v) { return v.lang.replace('_', '-') === lang && voiceScore(v) >= 0; })[0] || all[0] || null;
+  }
   function say(text) {
     if (!window.speechSynthesis || !text) return;
     speechSynthesis.cancel();
-    var u = new SpeechSynthesisUtterance(text), lang = accent();
-    var v = speechSynthesis.getVoices().filter(function (x) { return x.lang.replace('_', '-') === lang; });
-    u.lang = lang; if (v.length) u.voice = v[0];
+    var u = new SpeechSynthesisUtterance(text), v = pickVoice();
+    u.lang = v ? v.lang : accent();
+    if (v) u.voice = v;
     u.rate = 0.92;
     speechSynthesis.speak(u);
   }
@@ -211,6 +234,7 @@
     var a = ev.target.closest && ev.target.closest('[data-accent]');
     if (a) {
       store(ACCENT, a.dataset.accent);
+      localStorage.removeItem(VOICE);
       $$('[data-accent]').forEach(function (x) { x.classList.toggle('on', x.dataset.accent === a.dataset.accent); });
     }
   });
@@ -726,6 +750,10 @@
         : '<div class="setrow"><input class="inp" id="synctoken" type="password" autocomplete="off" placeholder="GitHub token（只需要 gist 权限）"><button class="btn" id="syncsave">保存并同步</button></div>' +
           '<p class="mute small">在 GitHub → Settings → Developer settings → Personal access tokens 建一个只勾 <b>gist</b> 的 token。可以和 Hacker News 收藏同步用同一个。</p><span class="syncstat"></span>') +
       '</div>' +
+      '<div class="panel setbox"><div class="eyebrow">朗读声音</div>' +
+      '<p>朗读用的是这台设备自带的声音，免费、不联网。不同设备的声音不同；带 Natural、Premium、Enhanced、Siri、Google 的通常更自然。默认自动挑最好的一个。</p>' +
+      '<div class="setrow"><select class="inp" id="voicesel"></select><button class="ghost" id="voicetry">试听</button></div>' +
+      '<p class="mute small">Mac：系统设置 → 辅助功能 → 朗读内容 → 系统声音 → 管理声音，下载 Premium / Enhanced 声音（如 Ava、Zoe）。iPhone：设置 → 辅助功能 → 朗读内容 → 声音 → 英语。Windows 上用 Edge 浏览器有微软的 Natural 声音。下载后重新打开这个页面。</p></div>' +
       '<div class="panel setbox"><div class="eyebrow">退出</div>' +
       '<p>网站密码保存在这个浏览器里，所以打开时不用每次输入。在别人的电脑或公用电脑上用完后，可以在这里退出：清除本机保存的密码，下次打开要重新输入。收藏和复习进度不受影响。</p>' +
       '<div class="setrow"><button class="ghost" id="signout">退出并清除本机密码</button></div></div>';
@@ -745,6 +773,18 @@
         Sync.run();
       };
     }
+    var sel = document.getElementById('voicesel');
+    function fillVoices() {
+      var all = englishVoices(), cur = localStorage.getItem(VOICE) || '';
+      sel.innerHTML = '<option value="">自动（' + esc(pickVoice() && !cur ? pickVoice().name : '最好的一个') + '）</option>' +
+        all.filter(function (v) { return voiceScore(v) >= 0; }).map(function (v) {
+          return '<option value="' + esc(v.name) + '"' + (v.name === cur ? ' selected' : '') + '>' + esc(v.name) + ' · ' + esc(v.lang) + '</option>';
+        }).join('');
+    }
+    fillVoices();
+    if (window.speechSynthesis) speechSynthesis.onvoiceschanged = fillVoices;
+    sel.onchange = function () { if (sel.value) store(VOICE, sel.value); else localStorage.removeItem(VOICE); };
+    document.getElementById('voicetry').onclick = function () { say('Let\'s spill the beans: this is how your example sentences will sound.'); };
     document.getElementById('signout').onclick = function () {
       localStorage.removeItem(PASS);
       DATA = null;
