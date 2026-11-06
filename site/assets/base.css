@@ -212,3 +212,7 @@ button.hc{cursor:pointer}button.hc:hover{outline:2px solid var(--acc2);outline-o
 .setbox p{margin:8px 0 12px;line-height:1.65}.setbox .small{font-size:13px}
 .setrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
 .syncstat{color:var(--mut);font-size:13px}
+.favn{font:700 10.5px var(--sans);background:var(--acc);color:var(--on-acc,#fff);border-radius:999px;padding:1px 6px;margin-left:4px}
+.tabico{position:relative;display:inline-flex}
+.tabbar .favn{position:absolute;top:-6px;left:13px;margin:0;padding:0 5px;font-size:9.5px;line-height:15px}
+.tabbar a{min-width:56px}

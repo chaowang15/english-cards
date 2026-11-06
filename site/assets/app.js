@@ -8,7 +8,7 @@
   var PALETTE = ['#8b5cf6', '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#f97316', '#6366f1', '#84cc16', '#14b8a6', '#d946ef'];
 
   var I = {
-      'nav.home': '首页', 'nav.browse': '浏览', 'nav.study': '学习', 'nav.search': '搜索', 'search.ph': '搜索单词、释义、例句', loading: '加载中…',
+      'nav.home': '首页', 'nav.browse': '浏览', 'nav.study': '学习', 'nav.favs': '收藏', 'nav.search': '搜索', 'search.ph': '搜索单词、释义、例句', loading: '加载中…',
       'lock.title': '输入密码', 'lock.sub': '卡片数据已加密，每台设备只需输入一次。', 'lock.go': '解锁', 'lock.bad': '密码不对', 'lock.out': '退出（清除本机密码）',
       wod: '今日一词', 'wod.study': '开始学习', 'wod.detail': '查看详情',
       'k.total': '卡片总数', 'k.week': '本周新增', 'k.streak': '连续学习天数', 'k.due': '待复习',
@@ -177,6 +177,8 @@
     ev.preventDefault(); ev.stopPropagation();
     var on = toggleStar(b.dataset.id);
     $$('.star[data-id="' + b.dataset.id + '"]').forEach(function (x) { x.classList.toggle('on', on); x.textContent = on ? '★' : '☆'; });
+    favCount();
+    if (!on && parse().path === 'favs') { var y = window.scrollY; route(); window.scrollTo(0, y); }
   });
 
   /* ---- pronunciation via the browser's speechSynthesis ---- */
@@ -263,9 +265,9 @@
   function viewSeg() {
     return '<div class="seg">' + ['title', 'one', 'full'].map(function (v) { return '<button data-set="view:' + v + '">' + t('v.' + v) + '</button>'; }).join('') + '</div>';
   }
-  function counts(key) {
+  function counts(key, base) {
     var m = {};
-    CARDS.forEach(function (c) { (key === 'tags' ? tagsOf(c) : [c[key]]).forEach(function (x) { if (x) m[x] = (m[x] || 0) + 1; }); });
+    (base || CARDS).forEach(function (c) { (key === 'tags' ? tagsOf(c) : [c[key]]).forEach(function (x) { if (x) m[x] = (m[x] || 0) + 1; }); });
     return Object.keys(m).sort(function (a, b) { return m[b] - m[a] || a.localeCompare(b); }).map(function (k) { return [k, m[k]]; });
   }
   function emptyAll() { return '<div class="empty">' + t('empty.all') + '</div>'; }
@@ -282,12 +284,19 @@
     if (cleanup) { cleanup(); cleanup = null; }
     var r = parse(), top = r.path.split('/')[0] || 'home';
     $$('[data-nav]').forEach(function (a) { a.classList.toggle('on', a.dataset.nav === top && !(top === 'browse' && r.q.get('focus'))); });
+    if (top === 'browse' && r.q.get('star') === '1') { location.replace('#/favs'); return; }
+    favCount();
     if (top === 'browse') browse(r.q);
+    else if (top === 'favs') browse(r.q, true);
     else if (top === 'study') study(r.q);
     else if (top === 'card') detail(decodeURIComponent(r.path.slice(5)));
     else if (top === 'sync') settings();
     else home();
     syncSet();
+  }
+  function favCount() {
+    var n = CARDS.filter(isStar).length;
+    $$('.favn').forEach(function (x) { x.textContent = n; x.hidden = !n; });
   }
   window.addEventListener('hashchange', function () { route(); window.scrollTo(0, 0); });
   document.addEventListener('keydown', function (ev) {
@@ -332,7 +341,7 @@
   function favPanel() {
     var n = CARDS.filter(isStar).length;
     return '<div class="panel duecta"><div><div class="eyebrow">' + t('fav.title') + '</div><b>' + n + ' ' + t('fav.n') + '</b></div>' +
-      (n ? '<span style="display:flex;gap:8px"><a class="ghost" href="#/browse?star=1">' + t('fav.browse') + '</a><a class="ghost" href="#/study?deck=star">' + t('fav.study') + '</a></span>' : '') + '</div>';
+      (n ? '<span style="display:flex;gap:8px"><a class="ghost" href="#/favs">' + t('fav.browse') + '</a><a class="ghost" href="#/study?deck=star">' + t('fav.study') + '</a></span>' : '') + '</div>';
   }
   function cloud(title, key) {
     var c = counts(key);
@@ -386,21 +395,21 @@
   }
   function letterOf(c) { return isZh(c) ? t('zh.head') : 'A–Z'; }
 
-  function browse(q) {
+  function browse(q, favMode) {
     if (!CARDS.length) { APP.innerHTML = emptyAll(); return; }
-    var st = { q: q.get('q') || '', tag: q.get('tag') || '', kind: q.get('kind') || '', star: q.get('star') === '1', day: q.get('day') || '',
+    var base = favMode ? CARDS.filter(isStar) : CARDS;
+    var st = { q: q.get('q') || '', tag: q.get('tag') || '', kind: q.get('kind') || '', star: !!favMode, day: q.get('day') || '',
       when: q.get('when') || '', sort: q.get('sort') || 'new' };
     function href(patch) {
       var s = Object.assign({}, st, patch), p = new URLSearchParams();
       ['q', 'tag', 'kind', 'day', 'when'].forEach(function (k) { if (s[k]) p.set(k, s[k]); });
-      if (s.star) p.set('star', '1');
       if (s.sort !== 'new') p.set('sort', s.sort);
       var x = p.toString();
-      return '#/browse' + (x ? '?' + x : '');
+      return (favMode ? '#/favs' : '#/browse') + (x ? '?' + x : '');
     }
     function group(label, chipsHTML) { return chipsHTML ? '<div class="fgroup"><span class="flabel">' + label + '</span><div class="filters">' + chipsHTML + '</div></div>' : ''; }
     var wc = {};
-    CARDS.forEach(function (c) {
+    base.forEach(function (c) {
       var w = whenOf(c), m = c.day.slice(0, 7);
       if (w === 'week' || w === 'last') wc[w] = (wc[w] || 0) + 1;
       wc[m] = (wc[m] || 0) + 1;
@@ -410,13 +419,12 @@
       .concat(months.map(function (m) { return [m, monthLabel(m)]; }))
       .map(function (x) { return chip(x[1], href({ when: st.when === x[0] ? '' : x[0], day: '' }), '#64748b', wc[x[0]], st.when === x[0]); }).join('');
     var filters = group(t('when'), whenChips) +
-      group(t('kinds'), counts('kind').map(function (x) { return chip(t(x[0]), href({ kind: st.kind === x[0] ? '' : x[0] }), colorOf(x[0]), x[1], st.kind === x[0]); }).join('')) +
-      group(t('tags'), counts('tags').map(function (x) { return chip(x[0], href({ tag: st.tag === x[0] ? '' : x[0] }), colorOf(x[0]), x[1], st.tag === x[0]); }).join(''));
+      group(t('kinds'), counts('kind', base).map(function (x) { return chip(t(x[0]), href({ kind: st.kind === x[0] ? '' : x[0] }), colorOf(x[0]), x[1], st.kind === x[0]); }).join('')) +
+      group(t('tags'), counts('tags', base).map(function (x) { return chip(x[0], href({ tag: st.tag === x[0] ? '' : x[0] }), colorOf(x[0]), x[1], st.tag === x[0]); }).join(''));
     var any = st.tag || st.kind || st.day || st.when;
-    var nFav = CARDS.filter(isStar).length;
-    APP.innerHTML = '<div class="rhead"><div class="rtop"><h1 class="rtitle">' + t('nav.browse') + (st.day ? ' · ' + esc(st.day) : '') + '</h1>' +
-      '<div class="seg favseg"><a class="' + (st.star ? '' : 'on') + '" href="' + href({ star: false }) + '">' + t('fav.all') + ' <b>' + CARDS.length + '</b></a>' +
-      '<a class="' + (st.star ? 'on' : '') + '" href="' + href({ star: true }) + '">' + t('fav.only') + ' <b>' + nFav + '</b></a></div></div>' +
+    var nFav = favMode ? base.length : 0;
+    APP.innerHTML = '<div class="rhead"><div class="rtop"><h1 class="rtitle">' + (favMode ? '★ ' + t('nav.favs') : t('nav.browse')) + (st.day ? ' · ' + esc(st.day) : '') + '</h1>' +
+      (favMode && nFav ? '<a class="ghost" href="#/study?deck=star">' + t('fav.study') + ' →</a>' : '') + '</div>' +
       '<div class="count"><b id="count">0</b> ' + t('cards.n') + (any ? ' · <a class="more" href="' + href({ tag: '', kind: '', day: '', when: '' }) + '">' + t('clear') + '</a>' : '') +
       '<span class="exports"><button class="ghost" id="excsv">' + t('exportc') + '</button><button class="ghost" id="exanki">' + t('exporta') + '</button></span></div>' +
       filters + '</div>' +
