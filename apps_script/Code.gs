@@ -169,7 +169,7 @@ function add_(card) {
   c.id = newId_(card.term);
   c.kind = KINDS.indexOf(c.kind) >= 0 ? c.kind : /[\u4e00-\u9fff]/.test(c.term) ? 'group' : /\s/.test(c.term) ? 'phrase' : 'word';
   c.status = STATUSES.indexOf(c.status) >= 0 ? c.status : 'new';
-  c.created_at = now;
+  c.created_at = card.created_at && !isNaN(new Date(card.created_at)) ? new Date(card.created_at).toISOString() : now;  // imports keep their date
   c.updated_at = now;
   writeRow_(sh, h, sh.getLastRow() + 1, c);
   return { ok: true, merged: false, card: toPublic_(c) };
