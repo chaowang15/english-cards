@@ -32,7 +32,7 @@ button{font:inherit;color:inherit}
 .iconbtn:hover{border-color:var(--acc)}
 .tabbar{display:none}
 @media (max-width:860px){
- .links,.searchbox{display:none}.tb{height:56px}.topbar .themepick{margin-left:auto}
+ .links,.searchbox{display:none}.tb{height:56px}.topbar .syncbtn{margin-left:auto}
  .tabbar{display:flex;position:fixed;z-index:40;left:0;right:0;bottom:0;justify-content:space-around;padding:6px 0 calc(6px + env(safe-area-inset-bottom));background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--line)}
  .tabbar a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:64px;min-height:46px;font-size:11px;color:var(--mut)}
  .tabbar a.on{color:var(--acc)}.tabbar .ico{width:20px;height:20px}
@@ -88,7 +88,7 @@ button{font:inherit;color:inherit}
 .wod .acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;align-items:stretch}
 .wod .acts .ghost{display:inline-flex;align-items:center;padding:0 18px;font-size:14px}
 body.locked .tabbar,body.locked .ecfoot,body.locked .links,body.locked .searchbox{display:none}
-body.locked .themepick{margin-left:auto}
+body.locked .syncbtn{display:none}body.locked .themepick{margin-left:auto}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
 .kpi{padding:16px 18px}
 .kpi b{display:block;font:800 28px/1.1 var(--sans);letter-spacing:-.03em}
@@ -216,3 +216,7 @@ button.hc{cursor:pointer}button.hc:hover{outline:2px solid var(--acc2);outline-o
 .tabico{position:relative;display:inline-flex}
 .tabbar .favn{position:absolute;top:-6px;left:13px;margin:0;padding:0 5px;font-size:9.5px;line-height:15px}
 .tabbar a{min-width:56px}
+.syncbtn{display:inline-flex;gap:6px;align-items:center}
+.syncbtn.busy .ico{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (max-width:860px){.syncbtn span{display:none}}

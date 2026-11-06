@@ -52,6 +52,8 @@ async function main() {
   if (!password) throw new Error('set CARDS_PASSWORD');
   const cards = (await loadCards()).filter((c) => String(c.term || '').trim());
   const built = new Date().toISOString();
+  // The page's 同步 button reads the Sheet directly; the endpoint travels inside the encrypted payload only.
+  const api = process.env.CARDS_API_URL && process.env.CARDS_API_KEY ? { url: process.env.CARDS_API_URL, key: process.env.CARDS_API_KEY } : null;
 
   await fs.rm(OUT, { recursive: true, force: true });
   await fs.cp(path.join(ROOT, 'site'), OUT, { recursive: true });
@@ -60,7 +62,7 @@ async function main() {
   await fs.writeFile(index, (await fs.readFile(index, 'utf8')).replaceAll('__V__', v));
   await fs.copyFile(index, path.join(OUT, '404.html'));
   await fs.mkdir(path.join(OUT, 'data'), { recursive: true });
-  await fs.writeFile(path.join(OUT, 'data', 'cards.enc.json'), JSON.stringify(await encrypt({ built, cards }, password)));
+  await fs.writeFile(path.join(OUT, 'data', 'cards.enc.json'), JSON.stringify(await encrypt({ built, cards, api }, password)));
   await fs.writeFile(path.join(OUT, '.nojekyll'), '');
   console.log(`built ${cards.length} cards -> ${path.relative(ROOT, OUT)}/ (${built})`);
 }

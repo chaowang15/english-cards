@@ -68,8 +68,6 @@ curl -sL "$URL?key=$KEY&action=get"
 
 After editing `Code.gs`, use **Deploy → Manage deployments → Edit → New version**, so the URL stays the same.
 
-Run `installTriggers` once from the editor. It adds a 5-minute check that rebuilds the site when the Sheet changes outside the API (typing in the Sheet, ChatGPT's Google Sheets connector); writes through the API already rebuild immediately.
-
 ### Columns
 
 `id, term, aliases, kind (word/phrase/idiom/usage/group), pos, ipa, meaning_zh, meaning_en, entries, usage, examples, synonyms, antonyms, collocations, source, source_url, context, tags, note, status (new/learning/known), starred, created_at, updated_at`

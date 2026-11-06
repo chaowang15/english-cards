@@ -264,28 +264,6 @@ function dispatch_() {
   } catch (err) { /* the hourly schedule still picks the change up */ }
 }
 
-/**
- * Edits that bypass this API (typing in the Sheet, ChatGPT's Google connector) send no dispatch.
- * A 5-minute trigger compares a fingerprint of the sheet and asks GitHub to rebuild when it changed.
- */
-function checkForChanges() {
-  var sh = sheet_(), values = sh.getDataRange().getValues();
-  var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, JSON.stringify(values));
-  var fp = Utilities.base64Encode(digest), p = PropertiesService.getScriptProperties();
-  if (p.getProperty('SHEET_FP') === fp) return;
-  p.setProperty('SHEET_FP', fp);
-  dispatch_();
-}
-
-/** Run once from the editor to install the 5-minute change check. */
-function installTriggers() {
-  ScriptApp.getProjectTriggers().forEach(function (t) {
-    if (t.getHandlerFunction() === 'checkForChanges') ScriptApp.deleteTrigger(t);
-  });
-  ScriptApp.newTrigger('checkForChanges').timeBased().everyMinutes(5).create();
-  checkForChanges();
-}
-
 function out_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }

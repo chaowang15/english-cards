@@ -122,12 +122,19 @@
       decrypt(ENV, p).then(function (d) { store(PASS, p); ready(d); }, function () { lockScreen(t('lock.bad')); });
     };
   }
+  /* Cards pulled with the 同步 button are kept here; they win over the published snapshot until a newer build. */
+  var CACHE = 'ecCardsCacheV1';
+  function setCards(list) {
+    CARDS = (list || []).filter(function (c) { return String(c.term || '').trim(); })
+      .sort(function (a, b) { return String(b.created_at).localeCompare(String(a.created_at)); });
+    BY = {};
+    CARDS.forEach(function (c) { c.day = localDay(c.created_at); BY[c.id] = c; });
+  }
   function ready(d) {
     document.body.classList.remove('locked');
     DATA = d;
-    CARDS = (d.cards || []).slice().sort(function (a, b) { return String(b.created_at).localeCompare(String(a.created_at)); });
-    BY = {};
-    CARDS.forEach(function (c) { c.day = localDay(c.created_at); BY[c.id] = c; });
+    var cache = jget(CACHE, null);
+    setCards(cache && cache.fetched > (d.built || '') ? cache.cards : d.cards);
     route();
     if (Sync.token() && Date.now() - Number(localStorage.getItem(SYNC_LAST) || 0) > 60000) Sync.run();
   }
@@ -679,6 +686,31 @@
       Sync._t = setTimeout(Sync.run, 1500);
     }
   };
+
+  /* ---- 同步 button: pull the latest cards straight from the Sheet, then sync stars / progress ---- */
+  function pullSheet() {
+    var btn = document.getElementById('syncbtn'), api = DATA && DATA.api;
+    if (!DATA || !btn || btn.classList.contains('busy')) return;
+    if (!api) { toast('这个版本的网站还不能直接读 Sheet'); return; }
+    btn.classList.add('busy');
+    var before = {};
+    CARDS.forEach(function (c) { before[c.id] = c.updated_at; });
+    fetch(api.url + '?key=' + encodeURIComponent(api.key) + '&action=get', { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.ok) throw new Error(j.error || 'Sheet error');
+        var added = 0, changed = 0;
+        j.cards.forEach(function (c) { if (!(c.id in before)) added++; else if (before[c.id] !== c.updated_at) changed++; });
+        store(CACHE, JSON.stringify({ fetched: new Date().toISOString(), cards: j.cards }));
+        setCards(j.cards);
+        if (parse().path.indexOf('study') !== 0) { var y = window.scrollY; route(); window.scrollTo(0, y); }
+        toast(added || changed ? '已同步：新增 ' + added + ' 张，更新 ' + changed + ' 张' : '已是最新，共 ' + j.cards.length + ' 张');
+        return Sync.run();
+      })
+      .catch(function (e) { toast('同步失败：' + e.message); })
+      .then(function () { btn.classList.remove('busy'); });
+  }
+  (function () { var b = document.getElementById('syncbtn'); if (b) b.addEventListener('click', pullSheet); })();
 
   /* ---- #/sync: this device's settings (sync token, sign out) ---- */
   function settings() {
