@@ -36,6 +36,20 @@ python3 -m http.server 8777 -d /tmp/ecprev   # open http://localhost:8777, passw
 
 Node 18+ is required; there are no npm dependencies.
 
+To preview with the real Sheet data, put `CARDS_API_URL` and `CARDS_API_KEY` in `.env` (git-ignored) and build without `--input`:
+
+```sh
+set -a; . ./.env; set +a
+CARDS_PASSWORD=demo OUT_DIR=/tmp/ecprev node scripts/build.mjs
+```
+
+Bulk import from a JSON file (`{"cards": [...]}`) goes through the API, so duplicates merge and `created_at` is kept:
+
+```sh
+set -a; . ./.env; set +a
+node scripts/import.mjs data/sample-cards.json
+```
+
 ## Setup
 
 ### 1. Google Sheet + Apps Script
