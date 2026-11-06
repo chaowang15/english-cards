@@ -35,7 +35,7 @@ function handle_(req) {
   if (!key || req.key !== key) return out_({ ok: false, error: 'unauthorized' });
   try {
     switch (req.action) {
-      case 'get': return out_({ ok: true, cards: readAll_().map(toPublic_) });
+      case 'get': return out_({ ok: true, cards: withLock_(fillMissing_).map(toPublic_) });
       case 'search': return out_(search_(req));
       case 'add': return out_(locked_(function () { return add_(req.card || {}); }));
       case 'update': return out_(locked_(function () { return update_(req); }));
@@ -84,14 +84,17 @@ function writeRow_(sh, h, row, card) {
   sh.getRange(row, 1, 1, h.length).setValues([vals]);
 }
 
-function locked_(fn) {
+function withLock_(fn) {
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
-  try {
-    var res = fn();
-    if (res.ok) dispatch_();
-    return res;
-  } finally { lock.releaseLock(); }
+  try { return fn(); } finally { lock.releaseLock(); }
+}
+
+/** Writes: run under the lock, then ask GitHub to rebuild. */
+function locked_(fn) {
+  var res = withLock_(fn);
+  if (res.ok) dispatch_();
+  return res;
 }
 
 /* ---------- field helpers ---------- */
@@ -215,6 +218,22 @@ function remove_(req) {
   if (!old) return { ok: false, error: 'card not found' };
   sheet_().deleteRow(old._row);
   return { ok: true, deleted: String(old.id) };
+}
+
+/** Rows typed or pasted by hand may lack id / kind / status / created_at: fill and save them. */
+function fillMissing_() {
+  var cards = readAll_(), sh = null, h = null, now = new Date().toISOString();
+  cards.forEach(function (o) {
+    if (String(o.id).trim() && String(o.created_at).trim() && KINDS.indexOf(o.kind) >= 0 && STATUSES.indexOf(o.status) >= 0) return;
+    if (!sh) { sh = sheet_(); h = header_(sh); }
+    if (!String(o.id).trim()) o.id = newId_(o.term);
+    if (!String(o.created_at).trim()) o.created_at = now;
+    if (!String(o.updated_at).trim()) o.updated_at = now;
+    if (KINDS.indexOf(o.kind) < 0) o.kind = /[\u4e00-\u9fff]/.test(o.term) ? 'group' : /\s/.test(String(o.term).trim()) ? 'phrase' : 'word';
+    if (STATUSES.indexOf(o.status) < 0) o.status = 'new';
+    writeRow_(sh, h, o._row, o);
+  });
+  return cards;
 }
 
 /** search: {q, limit?} — substring match over term, aliases, meanings, examples, tags. */
