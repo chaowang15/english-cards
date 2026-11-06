@@ -178,6 +178,8 @@
   }
   function starBtn(c) { var on = isStar(c); return '<button class="star' + (on ? ' on' : '') + '" data-id="' + esc(c.id) + '" aria-label="star">' + (on ? '★' : '☆') + '</button>'; }
   function list(v) { return Array.isArray(v) ? v.filter(Boolean) : String(v || '').split('\n').filter(Boolean); }
+  var HIDDEN_TAGS = ['notion-import'];  /* bookkeeping tags kept in the Sheet but not shown */
+  function tagsOf(c) { return list(c.tags).filter(function (x) { return HIDDEN_TAGS.indexOf(x) < 0; }); }
   function isZh(c) { return c.kind === 'group' || /[\u4e00-\u9fff]/.test(c.term || ''); }
   /* entries: one English expression per line, optionally "english — 中文说明" */
   function entries(c) {
@@ -227,7 +229,7 @@
   }
   function counts(key) {
     var m = {};
-    CARDS.forEach(function (c) { (key === 'tags' ? list(c.tags) : [c[key]]).forEach(function (x) { if (x) m[x] = (m[x] || 0) + 1; }); });
+    CARDS.forEach(function (c) { (key === 'tags' ? tagsOf(c) : [c[key]]).forEach(function (x) { if (x) m[x] = (m[x] || 0) + 1; }); });
     return Object.keys(m).sort(function (a, b) { return m[b] - m[a] || a.localeCompare(b); }).map(function (k) { return [k, m[k]]; });
   }
   function emptyAll() { return '<div class="empty">' + t('empty.all') + '</div>'; }
@@ -463,7 +465,7 @@
       (c.pos ? '<span class="pos">' + esc(c.pos) + '</span>' : '') + (c.ipa ? '<span>' + esc(c.ipa) + '</span>' : '') + (isZh(c) ? '' : sayBtn(c.term)) + accentSeg() + '</div>' +
       (c.meaning_zh ? '<p class="mz">' + esc(c.meaning_zh) + '</p>' : '') + (c.meaning_en ? '<p class="mute" style="margin:0">' + esc(c.meaning_en) + '</p>' : '') +
       fieldsHTML(c, { say: true }) +
-      '<div class="meta" style="margin-top:20px">' + (list(c.tags).length ? '<span class="tags">' + list(c.tags).map(function (x) { return chip(x, '#/browse?tag=' + encodeURIComponent(x), colorOf(x)); }).join('') + '</span>' : '') +
+      '<div class="meta" style="margin-top:20px">' + (tagsOf(c).length ? '<span class="tags">' + tagsOf(c).map(function (x) { return chip(x, '#/browse?tag=' + encodeURIComponent(x), colorOf(x)); }).join('') + '</span>' : '') +
       '<span>' + t('added') + ' ' + esc(c.day) + '</span></div></article>';
   }
 
