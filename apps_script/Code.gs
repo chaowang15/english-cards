@@ -334,8 +334,9 @@ function completeMissing_() {
 
 var CARD_SCHEMA = {
   type: 'object', additionalProperties: false,
-  required: ['kind', 'pos', 'ipa', 'meaning_zh', 'meaning_en', 'entries', 'usage', 'examples', 'synonyms', 'collocations', 'tags'],
+  required: ['term', 'kind', 'pos', 'ipa', 'meaning_zh', 'meaning_en', 'entries', 'usage', 'examples', 'synonyms', 'collocations', 'tags'],
   properties: {
+    term: { type: 'string' },
     kind: { type: 'string', enum: ['word', 'phrase', 'idiom', 'usage', 'group'] },
     pos: { type: 'string' }, ipa: { type: 'string' },
     meaning_zh: { type: 'string' }, meaning_en: { type: 'string' },
@@ -347,7 +348,8 @@ var CARD_SCHEMA = {
 };
 
 var COMPLETE_PROMPT = [
-  'You fill in vocabulary cards for a Chinese-speaking English learner. For each input card, return one completed card, in the same order.',
+  'You fill in vocabulary cards for a Chinese-speaking English learner. For each input card, return one completed card with the same "term", in the same order.',
+  '- meaning_zh and usage: Simplified Chinese only.',
   'Rules:',
   '- kind: word / phrase / idiom / usage for an English term; group when the term is Chinese (a Chinese headword collecting several English expressions).',
   '- meaning_zh: one short Chinese definition (several senses separated by "；"), no English inside.',
@@ -390,10 +392,16 @@ function callModel_(key, cards) {
   (j.output || []).forEach(function (o) {
     (o.content || []).forEach(function (c) { if (c.type === 'output_text') text += c.text; });
   });
-  var cardsOut = JSON.parse(text).cards || [];
-  if (cardsOut.length !== cards.length) throw new Error('model returned ' + cardsOut.length + ' cards for ' + cards.length);
-  return cardsOut.map(function (c, i) {
-    var t = String(cards[i].term).toLowerCase();
+  var got = JSON.parse(text).cards || [], byTerm = {};
+  got.forEach(function (c) { byTerm[norm_(c.term)] = c; });
+  // match by term, so a missing or extra card only skips that one word (it is retried on the next 同步)
+  return cards.map(function (o, i) {
+    var c = byTerm[norm_(o.term)] || (got.length === cards.length ? got[i] : null);
+    if (!c) return null;
+    var t = String(o.term).toLowerCase();
+    delete c.term;
+    c.ipa = c.ipa ? '/' + String(c.ipa).replace(/^\/+|\/+$/g, '') + '/' : '';
+    c.synonyms = union_([], (c.synonyms || []).filter(function (x) { return x.toLowerCase() !== t; }));
     c.meaning_en = c.meaning_en ? c.meaning_en.charAt(0).toUpperCase() + c.meaning_en.slice(1) : '';
     c.collocations = (c.collocations || []).filter(function (x) { return x.toLowerCase() !== t; });
     var keep = (c.tags || []).filter(function (x) { return known[x]; });
