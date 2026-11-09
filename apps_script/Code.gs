@@ -259,18 +259,27 @@ function looksLikeId_(s) {
 /** Rows typed or pasted by hand may lack id / kind / status / created_at: fill and save them. */
 function fillMissing_() {
   fixMisplaced_();
-  var cards = readAll_(), sh = null, h = null, now = new Date().toISOString();
+  var cards = readAll_(), sh = null, h = null, now = new Date().toISOString(), handRows = [];
   cards.forEach(function (o) {
     if (String(o.id).trim() && String(o.created_at).trim() && KINDS.indexOf(o.kind) >= 0 && STATUSES.indexOf(o.status) >= 0) return;
     if (!sh) { sh = sheet_(); h = header_(sh); }
-    if (!String(o.id).trim()) o.id = newId_(o.term);
+    if (!String(o.id).trim()) { o.id = newId_(o.term); handRows.push(o._row); }
     if (!String(o.created_at).trim()) o.created_at = now;
     if (!String(o.updated_at).trim()) o.updated_at = now;
     if (KINDS.indexOf(o.kind) < 0) o.kind = /[\u4e00-\u9fff]/.test(o.term) ? 'group' : /\s/.test(String(o.term).trim()) ? 'phrase' : 'word';
     if (STATUSES.indexOf(o.status) < 0) o.status = 'new';
     writeRow_(sh, h, o._row, o);
   });
-  return cards;
+  if (!handRows.length) return cards;
+  // Hand-added rows may be inserted anywhere (e.g. right under the header); keep the sheet in adding order.
+  var last = sh.getLastRow();
+  var atEnd = handRows.every(function (r, i) { return r === last - handRows.length + 1 + i; });
+  if (atEnd) return cards;
+  var moving = handRows;
+  var values = moving.map(function (r) { return sh.getRange(r, 1, 1, h.length).getValues()[0]; });
+  moving.slice().sort(function (a, b) { return b - a; }).forEach(function (r) { sh.deleteRow(r); });
+  values.forEach(function (v) { sh.appendRow(v); });
+  return readAll_();
 }
 
 /* ---------- auto-complete hand-added words (only when core content is missing) ---------- */
