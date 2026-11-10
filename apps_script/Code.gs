@@ -454,12 +454,17 @@ function settings_() {
     sh.appendRow(['key', 'value', 'note']);
     DEFAULT_SETTINGS.forEach(function (r) { sh.appendRow(r); });
   }
-  var vals = sh.getDataRange().getValues(), conf = {}, rows = {};
-  vals.slice(1).forEach(function (r, i) { var k = String(r[0]).trim(); if (k) { conf[k] = String(r[1]).trim(); rows[k] = i + 2; } });
+  var vals = sh.getDataRange().getValues(), conf = {}, rows = {}, tz = Session.getScriptTimeZone();
+  vals.slice(1).forEach(function (r, i) {
+    var k = String(r[0]).trim(), v = r[1];
+    // Sheets turns "2026-11-10" into a Date cell; read it back as the same text
+    if (v instanceof Date) v = Utilities.formatDate(v, tz, 'yyyy-MM-dd');
+    if (k) { conf[k] = String(v).trim(); rows[k] = i + 2; }
+  });
   DEFAULT_SETTINGS.forEach(function (d) {
     if (!(d[0] in conf)) { sh.appendRow(d); conf[d[0]] = d[1]; rows[d[0]] = sh.getLastRow(); }
   });
-  return { get: function (k) { return conf[k]; }, set: function (k, v) { sh.getRange(rows[k], 2).setValue(v); conf[k] = String(v); } };
+  return { get: function (k) { return conf[k]; }, set: function (k, v) { var c = sh.getRange(rows[k], 2); c.setNumberFormat('@'); c.setValue(String(v)); conf[k] = String(v); } };
 }
 
 var DAILY_PROMPT = [
