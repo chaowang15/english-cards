@@ -293,6 +293,7 @@ function isGroupTerm_(o) { return o.kind === 'group' || /[\u4e00-\u9fff]/.test(S
 function isIncomplete_(o) {
   if (!String(o.term || '').trim()) return false;
   if (list_(o.tags).indexOf('ai-filled') >= 0) return false;  // one attempt per card, so a bad answer never repeats the cost
+  if (list_(o.tags).indexOf('deleted') >= 0) return false;  // cards in the 回收站 are left alone
   if (!String(o.meaning_zh || '').trim()) return true;
   return isGroupTerm_(o) ? !list_(o.entries).length : !list_(o.examples).length;
 }
@@ -504,7 +505,8 @@ function dailyWords_(req) {
         var t = norm_(c.term);
         if (!t || seen[t] || out.length >= n) return;
         seen[t] = 1;
-        c.tags = union_(c.tags, [cat.toLowerCase(), 'auto-new']);
+        var catTag = cat.toLowerCase();
+        c.tags = union_(list_(c.tags).filter(function (x) { return x !== catTag; }), [catTag, 'auto-new']);  // category last: the site shows it
         var r = add_(c);
         if (r.ok && !r.merged) out.push(r.card.term);
       });

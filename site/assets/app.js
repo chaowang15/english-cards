@@ -124,11 +124,16 @@
   }
   /* Cards pulled with the 同步 button are kept here; they win over the published snapshot until a newer build. */
   var CACHE = 'ecCardsCacheV1';
-  function setCards(list) {
-    CARDS = (list || []).filter(function (c) { return String(c.term || '').trim(); })
+  var TRASH = [];
+  function isDeleted(c) { return list(c.tags).indexOf('deleted') >= 0; }
+  function allCards() { return CARDS.concat(TRASH); }
+  function setCards(listIn) {
+    var all = (listIn || []).filter(function (c) { return String(c.term || '').trim(); })
       .sort(function (a, b) { return String(b.created_at).localeCompare(String(a.created_at)); });
     BY = {};
-    CARDS.forEach(function (c) { c.day = localDay(c.created_at); BY[c.id] = c; });
+    all.forEach(function (c) { c.day = localDay(c.created_at); BY[c.id] = c; });
+    CARDS = all.filter(function (c) { return !isDeleted(c); });
+    TRASH = all.filter(isDeleted);
   }
   function ready(d) {
     document.body.classList.remove('locked');
@@ -243,9 +248,14 @@
   function chip(label, href, color, n, sel) {
     return '<a class="tag' + (sel ? ' sel' : '') + '" href="' + href + '" style="--c:' + color + '">' + esc(label) + (n != null ? '<b>' + n + '</b>' : '') + '</a>';
   }
+  var TRASH_ICON = '<svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
+  function delBtn(c) {
+    return isDeleted(c) ? '<button class="del restore" data-id="' + esc(c.id) + '">还原</button>'
+      : '<button class="del" data-id="' + esc(c.id) + '" aria-label="删除" title="删除（移到回收站）">' + TRASH_ICON + '</button>';
+  }
   function starBtn(c) { var on = isStar(c); return '<button class="star' + (on ? ' on' : '') + '" data-id="' + esc(c.id) + '" aria-label="star">' + (on ? '★' : '☆') + '</button>'; }
   function list(v) { return Array.isArray(v) ? v.filter(Boolean) : String(v || '').split('\n').filter(Boolean); }
-  var HIDDEN_TAGS = ['notion-import', 'ai-filled', 'auto-new'];  /* bookkeeping tags kept in the Sheet but not shown */
+  var HIDDEN_TAGS = ['notion-import', 'ai-filled', 'auto-new', 'deleted'];  /* bookkeeping tags kept in the Sheet but not shown */
   function tagsOf(c) { return list(c.tags).filter(function (x) { return HIDDEN_TAGS.indexOf(x) < 0; }); }
   function isZh(c) { return c.kind === 'group' || /[\u4e00-\u9fff]/.test(c.term || ''); }
   /* entries: one English expression per line, optionally "english — 中文说明" */
@@ -285,7 +295,7 @@
     return '<div class="fields">' + f.join('') + '</div>';
   }
   function itemHTML(c) {
-    return '<article class="ci">' + starBtn(c) +
+    return '<article class="ci' + (isDeleted(c) ? ' gone' : '') + '">' + (isDeleted(c) ? '' : starBtn(c)) + delBtn(c) +
       '<div class="h"><a class="t" href="#/card/' + encodeURIComponent(c.id) + '">' + esc(c.term) + '</a>' +
       (c.pos ? '<span class="pos">' + esc(c.pos) + '</span>' : '') + (c.ipa ? '<span class="ipa">' + esc(c.ipa) + '</span>' : '') +
       '<span class="z">' + esc(isZh(c) ? enLine(c) : c.meaning_zh) + '</span></div>' +
@@ -314,11 +324,13 @@
     if (!DATA) return;
     if (cleanup) { cleanup(); cleanup = null; }
     var r = parse(), top = r.path.split('/')[0] || 'home';
+    APP.className = 'wrap' + (['browse', 'favs', 'trash', 'study', 'card', 'sync'].indexOf(top) < 0 ? ' homepage' : '');
     $$('[data-nav]').forEach(function (a) { a.classList.toggle('on', a.dataset.nav === top && !(top === 'browse' && r.q.get('focus'))); });
     if (top === 'browse' && r.q.get('star') === '1') { location.replace('#/favs'); return; }
     favCount();
     if (top === 'browse') browse(r.q);
-    else if (top === 'favs') browse(r.q, true);
+    else if (top === 'favs') browse(r.q, 'favs');
+    else if (top === 'trash') browse(r.q, 'trash');
     else if (top === 'study') study(r.q);
     else if (top === 'card') detail(decodeURIComponent(r.path.slice(5)));
     else if (top === 'sync') settings();
@@ -363,7 +375,9 @@
     if (auto.length) {
       var latest = auto.reduce(function (m, c) { return c.day > m ? c.day : m; }, '');
       var batch = auto.filter(function (c) { return c.day === latest; });
-      var cat = batch.length ? tagsOf(batch[0]).filter(function (x) { return x !== 'auto-new'; })[0] : '';
+      // the category is the last tag the daily job adds (model tags come first)
+      var cat = batch.map(function (c) { var tg = tagsOf(c); return tg[tg.length - 1]; })
+        .filter(function (x, i, a) { return x && a.indexOf(x) === i; }).join(' · ');
       h += '<section><div class="sech"><h2>' + (latest === today ? '今日新词' : '最新一批新词') +
         '<span class="hsub">' + esc(latest) + (cat ? ' · ' + esc(cat) : '') + '</span></h2>' +
         '<span style="display:flex;gap:8px"><a class="ghost" href="#/study?tag=auto-new">学全部新词 →</a><a class="ghost" href="#/browse?tag=auto-new">全部 ' + auto.length + '</a></span></div>' +
@@ -436,9 +450,11 @@
   }
   function letterOf(c) { return isZh(c) ? t('zh.head') : 'A–Z'; }
 
-  function browse(q, favMode) {
-    if (!CARDS.length) { APP.innerHTML = emptyAll(); return; }
-    var base = favMode ? CARDS.filter(isStar) : CARDS;
+  function browse(q, mode) {
+    var favMode = mode === 'favs', trashMode = mode === 'trash';
+    if (!CARDS.length && !trashMode) { APP.innerHTML = emptyAll(); return; }
+    if (trashMode && !TRASH.length) { APP.innerHTML = '<div class="rhead"><h1 class="rtitle">回收站</h1></div><div class="empty">回收站是空的。删除的卡片会放在这里，可以随时还原。</div>'; return; }
+    var base = trashMode ? TRASH : favMode ? CARDS.filter(isStar) : CARDS;
     var st = { q: q.get('q') || '', tag: q.get('tag') || '', kind: q.get('kind') || '', star: !!favMode, day: q.get('day') || '',
       when: q.get('when') || '', sort: q.get('sort') || 'new' };
     function href(patch) {
@@ -446,7 +462,7 @@
       ['q', 'tag', 'kind', 'day', 'when'].forEach(function (k) { if (s[k]) p.set(k, s[k]); });
       if (s.sort !== 'new') p.set('sort', s.sort);
       var x = p.toString();
-      return (favMode ? '#/favs' : '#/browse') + (x ? '?' + x : '');
+      return (trashMode ? '#/trash' : favMode ? '#/favs' : '#/browse') + (x ? '?' + x : '');
     }
     function group(label, chipsHTML) { return chipsHTML ? '<div class="fgroup"><span class="flabel">' + label + '</span><div class="filters">' + chipsHTML + '</div></div>' : ''; }
     var wc = {};
@@ -464,8 +480,9 @@
       group(t('tags'), counts('tags', base).map(function (x) { return chip(x[0], href({ tag: st.tag === x[0] ? '' : x[0] }), colorOf(x[0]), x[1], st.tag === x[0]); }).join(''));
     var any = st.tag || st.kind || st.day || st.when;
     var nFav = favMode ? base.length : 0;
-    APP.innerHTML = '<div class="rhead"><div class="rtop"><h1 class="rtitle">' + (favMode ? '★ ' + t('nav.favs') : t('nav.browse')) + (st.day ? ' · ' + esc(st.day) : '') + '</h1>' +
-      (favMode && nFav ? '<a class="ghost" href="#/study?deck=star">' + t('fav.study') + ' →</a>' : '') + '</div>' +
+    APP.innerHTML = '<div class="rhead"><div class="rtop"><h1 class="rtitle">' + (trashMode ? '回收站' : favMode ? '★ ' + t('nav.favs') : t('nav.browse')) + (st.day ? ' · ' + esc(st.day) : '') + '</h1>' +
+      (favMode && nFav ? '<a class="ghost" href="#/study?deck=star">' + t('fav.study') + ' →</a>' : '') +
+      (!favMode && !trashMode && TRASH.length ? '<a class="ghost" href="#/trash">回收站 ' + TRASH.length + '</a>' : '') + '</div>' +
       '<div class="count"><b id="count">0</b> ' + t('cards.n') + (any ? ' · <a class="more" href="' + href({ tag: '', kind: '', day: '', when: '' }) + '">' + t('clear') + '</a>' : '') +
       '<span class="exports"><button class="ghost" id="excsv">' + t('exportc') + '</button><button class="ghost" id="exanki">' + t('exporta') + '</button></span></div>' +
       filters + '</div>' +
@@ -479,7 +496,7 @@
     function draw() {
       st.q = input.value;
       var terms = st.q.toLowerCase().split(/\s+/).filter(Boolean);
-      shown = CARDS.filter(function (c) {
+      shown = base.filter(function (c) {
         if (st.kind && c.kind !== st.kind) return false;
         if (st.tag && list(c.tags).indexOf(st.tag) < 0) return false;
         if (st.day && c.day !== st.day) return false;
@@ -545,7 +562,8 @@
     var c = BY[id];
     if (!c) { APP.innerHTML = '<div class="empty">' + t('notfound') + '</div>'; return; }
     APP.innerHTML = '<a class="backlink" href="javascript:history.back()">← ' + t('back') + '</a>' +
-      '<article class="detail panel" style="position:relative"><div style="position:absolute;top:18px;right:18px">' + starBtn(c) + '</div>' +
+      (isDeleted(c) ? '<div class="panel gonebar">这张卡片在回收站里。' + delBtn(c) + '</div>' : '') +
+      '<article class="detail panel" style="position:relative"><div class="dbtns">' + (isDeleted(c) ? '' : starBtn(c) + delBtn(c)) + '</div>' +
       '<div class="eyebrow">' + t(c.kind) + '</div><h1 class="term">' + esc(c.term) + '</h1>' +
       '<div class="pron" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:var(--mut);font-family:var(--mono)">' +
       (c.pos ? '<span class="pos">' + esc(c.pos) + '</span>' : '') + (c.ipa ? '<span>' + esc(c.ipa) + '</span>' : '') + (isZh(c) ? '' : sayBtn(c.term)) + accentSeg() + '</div>' +
@@ -721,6 +739,53 @@
     }
   };
 
+  /* ---- delete = move to the 回收站 (hidden tag `deleted` in the Sheet); restore removes the tag ---- */
+  function confirmBox(msg, ok) {
+    return new Promise(function (resolve) {
+      var m = document.createElement('div');
+      m.className = 'modal';
+      m.innerHTML = '<div class="mbox panel"><p>' + msg + '</p><div class="setrow" style="justify-content:flex-end">' +
+        '<button class="ghost" data-a="0">取消</button><button class="btn danger" data-a="1">' + esc(ok) + '</button></div></div>';
+      function done(v) { m.remove(); document.removeEventListener('keydown', key); resolve(v); }
+      function key(e) { if (e.key === 'Escape') done(false); if (e.key === 'Enter') done(true); }
+      m.addEventListener('click', function (e) { var b = e.target.closest('[data-a]'); if (b) done(b.dataset.a === '1'); else if (e.target === m) done(false); });
+      document.addEventListener('keydown', key);
+      document.body.appendChild(m);
+      m.querySelector('[data-a="1"]').focus();
+    });
+  }
+  function setDeleted(c, del) {
+    var api = DATA && DATA.api, old = list(c.tags);
+    if (!api) { toast('这个版本的网站还不能修改 Sheet'); return; }
+    var tags = old.filter(function (x) { return x !== 'deleted'; });
+    if (del) tags.push('deleted');
+    c.tags = tags;
+    var y = window.scrollY;
+    setCards(allCards()); route(); window.scrollTo(0, y);
+    fetch(api.url, { method: 'POST', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ key: api.key, action: 'update', id: c.id, fields: { tags: tags }, replace: true }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.ok) throw new Error(j.error || 'Sheet error');
+        store(CACHE, JSON.stringify({ fetched: new Date().toISOString(), cards: allCards() }));
+        toast(del ? '已删除「' + c.term + '」，可以在回收站还原' : '已还原「' + c.term + '」');
+      })
+      .catch(function (e) {
+        c.tags = old; setCards(allCards()); route();
+        toast((del ? '删除' : '还原') + '失败：' + e.message);
+      });
+  }
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest && ev.target.closest('.del');
+    if (!b) return;
+    ev.preventDefault(); ev.stopPropagation();
+    var c = BY[b.dataset.id];
+    if (!c) return;
+    if (isDeleted(c)) { setDeleted(c, false); return; }
+    confirmBox('确定删除「' + esc(c.term) + '」吗？<br><span class="mute small">卡片会移到回收站，可以随时还原。</span>', '删除')
+      .then(function (yes) { if (yes) setDeleted(c, true); });
+  });
+
   /* ---- 同步 button: pull the latest cards straight from the Sheet, then sync stars / progress ---- */
   function pullSheet() {
     var btn = document.getElementById('syncbtn'), api = DATA && DATA.api;
@@ -808,7 +873,7 @@
   var foot = document.createElement('footer');
   foot.className = 'empty ecfoot';
   foot.style.padding = '30px 0 40px';
-  foot.innerHTML = '<a class="mute" href="#/sync" style="font-size:13px">本机设置 · 同步 / 退出</a>';
+  foot.innerHTML = '<a class="mute" href="#/sync" style="font-size:13px">本机设置 · 同步 / 退出</a> · <a class="mute" href="#/trash" style="font-size:13px">回收站</a>';
   document.body.insertBefore(foot, document.querySelector('.tabbar'));
 
   boot();

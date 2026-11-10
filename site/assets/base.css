@@ -220,3 +220,16 @@ button.hc{cursor:pointer}button.hc:hover{outline:2px solid var(--acc2);outline-o
 .syncbtn.busy .ico{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (max-width:860px){.syncbtn span{display:none}}
+.ci .del{position:absolute;top:8px;right:38px;width:30px;height:34px;border:0;background:transparent;color:var(--mut);cursor:pointer;border-radius:9px;display:grid;place-items:center;opacity:.55}
+.ci .del:hover{background:var(--hl);color:#ef4444;opacity:1}
+.ci{padding-right:76px}
+.ci.gone .t{text-decoration:line-through;text-decoration-color:var(--mut)}
+.del.restore{width:auto;padding:0 10px;height:30px;font:600 12.5px var(--sans);color:var(--acc);border:1px solid color-mix(in srgb,var(--acc) 40%,transparent);background:transparent;border-radius:9px;cursor:pointer;opacity:1}
+.ci .del.restore{top:10px;right:6px}
+.homepage .ci .star,.homepage .ci .del{display:none}.homepage .ci{padding-right:8px}
+.dbtns{position:absolute;top:14px;right:14px;display:flex;gap:2px;align-items:center}
+.dbtns .del{display:grid;place-items:center;width:34px;height:34px;border:0;background:transparent;color:var(--mut);cursor:pointer;border-radius:9px}.dbtns .del:hover{color:#ef4444;background:var(--hl)}
+.gonebar{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:12px 16px;margin-top:16px;color:var(--mut)}
+.modal{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.35);display:grid;place-items:center;padding:20px;animation:fade .15s}
+.mbox{max-width:380px;width:100%;padding:22px 24px;background:var(--card-solid)}.mbox p{margin:0 0 6px;line-height:1.6;font-size:15px}.mbox .small{font-size:13px}
+.btn.danger{background:#dc2626;color:#fff;box-shadow:none}
