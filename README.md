@@ -94,6 +94,20 @@ Optional instant rebuilds: create a fine-grained token with *Contents: read and 
 - **Rebuilds**: writes through the API send `repository_dispatch` (about a minute); the hourly schedule catches everything else.
 - **Favorites / review progress across devices**: open `?sync` (or 本机设置 in the footer), paste a GitHub token with only the `gist` scope once per device; data goes to a private gist `english-cards-sync.json`.
 
+## Daily new words
+
+`.github/workflows/daily-words.yml` calls the `daily` action every morning (about 7–8 am Pacific; *Run workflow* with *force* to try it now). Apps Script picks the next category, asks the model for a few candidates, drops anything already in the Sheet (terms and aliases), and adds `daily_count` cards tagged with the category and the hidden tag `auto-new`; the home page shows the latest batch under 今日新词.
+
+Settings live in the `settings` sheet (created on the first run; edit the `value` column):
+
+| key | default | meaning |
+| --- | --- | --- |
+| `daily_enabled` | `yes` | turn the feature on / off |
+| `daily_count` | `5` | words per day (1–10) |
+| `daily_days` | `mon,…,sun` | days to run, e.g. `mon,tue,wed,thu,fri` |
+| `daily_categories` | 15 categories | comma-separated rotation; also used as tags |
+| `daily_next`, `daily_last` | | rotation position and last run date (updated automatically) |
+
 ## Security notes
 
 - The site, its code and the encrypted file are public; card text is not readable without the password. Use a long password: anyone can download the encrypted file and try passwords offline.

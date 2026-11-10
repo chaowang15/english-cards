@@ -245,7 +245,7 @@
   }
   function starBtn(c) { var on = isStar(c); return '<button class="star' + (on ? ' on' : '') + '" data-id="' + esc(c.id) + '" aria-label="star">' + (on ? '★' : '☆') + '</button>'; }
   function list(v) { return Array.isArray(v) ? v.filter(Boolean) : String(v || '').split('\n').filter(Boolean); }
-  var HIDDEN_TAGS = ['notion-import', 'ai-filled'];  /* bookkeeping tags kept in the Sheet but not shown */
+  var HIDDEN_TAGS = ['notion-import', 'ai-filled', 'auto-new'];  /* bookkeeping tags kept in the Sheet but not shown */
   function tagsOf(c) { return list(c.tags).filter(function (x) { return HIDDEN_TAGS.indexOf(x) < 0; }); }
   function isZh(c) { return c.kind === 'group' || /[\u4e00-\u9fff]/.test(c.term || ''); }
   /* entries: one English expression per line, optionally "english — 中文说明" */
@@ -359,6 +359,16 @@
       '<div class="kpi panel"><b>' + week + '</b><small>' + t('k.week') + '</small></div>' +
       '<div class="kpi panel"><b>' + streak() + '</b><small>' + t('k.streak') + '</small></div>' +
       '<a class="kpi panel due" href="#/study?deck=due"><b>' + due + '</b><small>' + t('k.due') + '</small></a></div></section>';
+    var auto = CARDS.filter(function (c) { return list(c.tags).indexOf('auto-new') >= 0; });
+    if (auto.length) {
+      var latest = auto.reduce(function (m, c) { return c.day > m ? c.day : m; }, '');
+      var batch = auto.filter(function (c) { return c.day === latest; });
+      var cat = batch.length ? tagsOf(batch[0]).filter(function (x) { return x !== 'auto-new'; })[0] : '';
+      h += '<section><div class="sech"><h2>' + (latest === today ? '今日新词' : '最新一批新词') +
+        '<span class="hsub">' + esc(latest) + (cat ? ' · ' + esc(cat) : '') + '</span></h2>' +
+        '<span style="display:flex;gap:8px"><a class="ghost" href="#/study?tag=auto-new">学全部新词 →</a><a class="ghost" href="#/browse?tag=auto-new">全部 ' + auto.length + '</a></span></div>' +
+        '<div class="cl">' + batch.map(itemHTML).join('') + '</div></section>';
+    }
     h += '<section><div class="sech"><h2>' + t('recent') + '</h2>' + viewSeg() + '</div>' +
       '<div class="cl">' + CARDS.slice(0, 10).map(itemHTML).join('') + '</div>' +
       (CARDS.length > 10 ? '<a class="more" href="#/browse">' + t('all') + ' ' + CARDS.length + ' →</a>' : '') + '</section>';

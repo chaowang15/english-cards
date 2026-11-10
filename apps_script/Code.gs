@@ -37,6 +37,7 @@ function handle_(req) {
     switch (req.action) {
       case 'get': return out_(getCards_(req));
       case 'search': return out_(search_(req));
+      case 'daily': return out_(dailyWords_(req));
       case 'add': return out_(locked_(function () { return add_(req.card || {}); }));
       case 'update': return out_(locked_(function () { return update_(req); }));
       case 'delete': return out_(locked_(function () { return remove_(req); }));
@@ -364,7 +365,11 @@ var COMPLETE_PROMPT = [
 ].join('\n');
 
 /** One Responses API call for the whole batch; returns an array aligned with `cards`. */
-function callModel_(key, cards) {
+/**
+ * One Responses API call. Fill mode (no `intro`): returns an array aligned with `cards` (null = skipped).
+ * Suggest mode (`intro` given): `cards` is ignored and every card the model returns comes back, with its term.
+ */
+function callModel_(key, cards, intro) {
   var p = PropertiesService.getScriptProperties();
   var model = p.getProperty('OPENAI_MODEL') || 'gpt-6-luna';
   var known = {};
@@ -376,7 +381,9 @@ function callModel_(key, cards) {
   });
   var body = {
     model: model,
-    input: COMPLETE_PROMPT + '\n\nEXISTING TAGS: ' + (tags.join(', ') || '(none)') + '\n\nInput cards (JSON):\n' + JSON.stringify(input),
+    input: intro
+      ? intro + '\n\nCard rules:\n' + COMPLETE_PROMPT + '\n\nEXISTING TAGS: ' + (tags.join(', ') || '(none)')
+      : COMPLETE_PROMPT + '\n\nEXISTING TAGS: ' + (tags.join(', ') || '(none)') + '\n\nInput cards (JSON):\n' + JSON.stringify(input),
     text: { format: { type: 'json_schema', name: 'cards', strict: true, schema: {
       type: 'object', additionalProperties: false, required: ['cards'],
       properties: { cards: { type: 'array', items: CARD_SCHEMA } } } } }
@@ -401,13 +408,8 @@ function callModel_(key, cards) {
     (o.content || []).forEach(function (c) { if (c.type === 'output_text') text += c.text; });
   });
   var got = JSON.parse(text).cards || [], byTerm = {};
-  got.forEach(function (c) { byTerm[norm_(c.term)] = c; });
-  // match by term, so a missing or extra card only skips that one word (it is retried on the next 同步)
-  return cards.map(function (o, i) {
-    var c = byTerm[norm_(o.term)] || (got.length === cards.length ? got[i] : null);
-    if (!c) return null;
-    var t = String(o.term).toLowerCase();
-    delete c.term;
+  function tidy(c, term) {
+    var t = String(term).toLowerCase();
     c.ipa = c.ipa ? '/' + String(c.ipa).replace(/^\/+|\/+$/g, '') + '/' : '';
     c.synonyms = union_([], (c.synonyms || []).filter(function (x) { return x.toLowerCase() !== t; }));
     c.meaning_en = c.meaning_en ? c.meaning_en.charAt(0).toUpperCase() + c.meaning_en.slice(1) : '';
@@ -415,7 +417,101 @@ function callModel_(key, cards) {
     var keep = (c.tags || []).filter(function (x) { return known[x]; });
     c.tags = keep.length ? keep : (c.tags || []).slice(0, 1);
     return c;
+  }
+  if (intro) return got.filter(function (c) { return String(c.term || '').trim(); }).map(function (c) { return tidy(c, c.term); });
+  got.forEach(function (c) { byTerm[norm_(c.term)] = c; });
+  // match by term, so a missing or extra card only skips that one word (it is retried on the next 同步)
+  return cards.map(function (o, i) {
+    var c = byTerm[norm_(o.term)] || (got.length === cards.length ? got[i] : null);
+    if (!c) return null;
+    delete c.term;
+    return tidy(c, o.term);
   });
+}
+
+/* ---------- daily new words (called once a day by GitHub Actions) ---------- */
+
+var SETTINGS_SHEET = 'settings';
+var DEFAULT_SETTINGS = [
+  ['daily_enabled', 'yes', 'yes / no：每天自动新增单词'],
+  ['daily_count', '5', '每天新增几个（1–10）'],
+  ['daily_days', 'mon,tue,wed,thu,fri,sat,sun', '哪几天新增，例如只在工作日：mon,tue,wed,thu,fri'],
+  ['daily_categories', 'spoken, home, cooking, food, work, business, politics, economy, tech, research, health, travel, emotion, idioms, phrasal verbs',
+    '按顺序轮换的类别，逗号分隔（也会用作英文标签）'],
+  ['daily_next', '0', '下一个类别的序号（从 0 开始，程序自动更新）'],
+  ['daily_last', '', '上次新增的日期（程序自动更新；清空可以让今天再跑一次）']
+];
+
+/** Key / value settings the user edits in the `settings` sheet; created with defaults on first use. */
+function settings_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(SETTINGS_SHEET);
+  if (!sh) {
+    sh = ss.insertSheet(SETTINGS_SHEET);
+    sh.appendRow(['key', 'value', 'note']);
+    DEFAULT_SETTINGS.forEach(function (r) { sh.appendRow(r); });
+  }
+  var vals = sh.getDataRange().getValues(), conf = {}, rows = {};
+  vals.slice(1).forEach(function (r, i) { var k = String(r[0]).trim(); if (k) { conf[k] = String(r[1]).trim(); rows[k] = i + 2; } });
+  DEFAULT_SETTINGS.forEach(function (d) {
+    if (!(d[0] in conf)) { sh.appendRow(d); conf[d[0]] = d[1]; rows[d[0]] = sh.getLastRow(); }
+  });
+  return { get: function (k) { return conf[k]; }, set: function (k, v) { sh.getRange(rows[k], 2).setValue(v); conf[k] = String(v); } };
+}
+
+var DAILY_PROMPT = [
+  'Suggest common, genuinely useful English words or short phrases for a Chinese-speaking adult learner (intermediate to advanced),',
+  'all in the given category. Prefer expressions people actually use in conversation, the news or work; avoid rare, archaic or very basic words.',
+  'Never suggest anything in the EXISTING list (or an inflected form of it). Each card needs a "term". Follow the card rules below; ignore any rule about input cards.'
+].join(' ');
+
+/** daily: {force?: '1'}. Adds `daily_count` new cards from the next category; at most once per day. */
+function dailyWords_(req) {
+  var conf = settings_(), key = PropertiesService.getScriptProperties().getProperty('OPENAI_API_KEY');
+  var tz = Session.getScriptTimeZone(), today = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+  var dow = Utilities.formatDate(new Date(), tz, 'EEE').toLowerCase().slice(0, 3);
+  var force = String(req.force) === '1';
+  if (!/^(yes|y|true|1|on)$/i.test(conf.get('daily_enabled') || '') && !force) return { ok: true, skipped: 'disabled' };
+  if (conf.get('daily_days').toLowerCase().indexOf(dow) < 0 && !force) return { ok: true, skipped: 'not today (' + dow + ')' };
+  if (conf.get('daily_last') === today && !force) return { ok: true, skipped: 'already done today' };
+  if (!key) return { ok: false, error: 'OPENAI_API_KEY is not set' };
+  var cats = conf.get('daily_categories').split(',').map(function (x) { return x.trim(); }).filter(String);
+  if (!cats.length) return { ok: false, error: 'daily_categories is empty' };
+  var n = Math.max(1, Math.min(10, parseInt(conf.get('daily_count'), 10) || 5));
+  var idx = (parseInt(conf.get('daily_next'), 10) || 0) % cats.length;
+
+  var added = [], tried = [];
+  // a category that yields nothing new is skipped, so the rotation never gets stuck
+  for (var step = 0; step < cats.length && !added.length; step++) {
+    var cat = cats[(idx + step) % cats.length];
+    tried.push(cat);
+    var got;
+    try { got = suggestWords_(key, cat, n + 4); } catch (err) { return { ok: false, error: String(err && err.message || err), tried: tried }; }
+    added = withLock_(function () {
+      var cards = readAll_(), seen = {}, out = [];
+      cards.forEach(function (o) { seen[norm_(o.term)] = 1; list_(o.aliases).forEach(function (a) { seen[norm_(a)] = 1; }); });
+      got.forEach(function (c) {
+        var t = norm_(c.term);
+        if (!t || seen[t] || out.length >= n) return;
+        seen[t] = 1;
+        c.tags = union_(c.tags, [cat.toLowerCase(), 'auto-new']);
+        var r = add_(c);
+        if (r.ok && !r.merged) out.push(r.card.term);
+      });
+      return out;
+    });
+    if (added.length) idx = (idx + step + 1) % cats.length;
+  }
+  conf.set('daily_next', idx);
+  conf.set('daily_last', today);
+  return { ok: true, category: tried[tried.length - 1], added: added, tried: tried };
+}
+
+/** Ask the model for `count` new cards in `category`, avoiding every existing term. */
+function suggestWords_(key, category, count) {
+  var existing = readAll_().map(function (o) { return String(o.term); });
+  return callModel_(key, [], DAILY_PROMPT + '\nCATEGORY: ' + category + '\nCOUNT: return exactly ' + count + ' cards' +
+    '\nEXISTING (' + existing.length + '): ' + existing.join('; '));
 }
 
 /** search: {q, limit?} — substring match over term, aliases, meanings, examples, tags. */

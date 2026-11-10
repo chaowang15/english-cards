@@ -1,0 +1,27 @@
+name: Daily new words
+
+on:
+  schedule:
+    - cron: "5 15 * * *"   # about 7–8 am Pacific; the settings sheet decides whether today runs
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Run even if today was already done or is not a selected day"
+        type: boolean
+        default: false
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask the Sheet API for today's words
+        env:
+          CARDS_API_URL: ${{ secrets.CARDS_API_URL }}
+          CARDS_API_KEY: ${{ secrets.CARDS_API_KEY }}
+          FORCE: ${{ inputs.force && '1' || '0' }}
+        run: |
+          set -euo pipefail
+          body=$(printf '{"key":"%s","action":"daily","force":"%s"}' "$CARDS_API_KEY" "$FORCE")
+          res=$(curl -sSL --max-time 300 -H 'Content-Type: text/plain' -d "$body" "$CARDS_API_URL")
+          echo "$res"
+          echo "$res" | grep -q '"ok":true'
