@@ -418,7 +418,10 @@ function callModel_(key, cards, intro) {
     c.tags = keep.length ? keep : (c.tags || []).slice(0, 1);
     return c;
   }
-  if (intro) return got.filter(function (c) { return String(c.term || '').trim(); }).map(function (c) { return tidy(c, c.term); });
+  if (intro) return got.map(function (c) {
+    c.term = String(c.term || '').replace(/[\u2018\u2019]/g, "'").replace(/[.!?。！？]+$/, '').trim();
+    return c;
+  }).filter(function (c) { return c.term; }).map(function (c) { return tidy(c, c.term); });
   got.forEach(function (c) { byTerm[norm_(c.term)] = c; });
   // match by term, so a missing or extra card only skips that one word (it is retried on the next 同步)
   return cards.map(function (o, i) {
@@ -460,8 +463,10 @@ function settings_() {
 }
 
 var DAILY_PROMPT = [
-  'Suggest common, genuinely useful English words or short phrases for a Chinese-speaking adult learner (intermediate to advanced),',
-  'all in the given category. Prefer expressions people actually use in conversation, the news or work; avoid rare, archaic or very basic words.',
+  'Suggest English words or short phrases for a Chinese-speaking adult learner at an upper-intermediate to advanced level (about CEFR B2–C1),',
+  'all in the given category: expressions natives really use in conversation, the news or work, but that such a learner may not know yet.',
+  'Avoid beginner phrases (e.g. "What do you mean?", "It depends", "Thank you"), rare or archaic words, and full sentences.',
+  'Write each term as a dictionary headword: no trailing punctuation, straight apostrophes, lowercase unless a proper noun.',
   'Never suggest anything in the EXISTING list (or an inflected form of it). Each card needs a "term". Follow the card rules below; ignore any rule about input cards.'
 ].join(' ');
 
