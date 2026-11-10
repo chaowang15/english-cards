@@ -366,7 +366,7 @@ var COMPLETE_PROMPT = [
 /** One Responses API call for the whole batch; returns an array aligned with `cards`. */
 function callModel_(key, cards) {
   var p = PropertiesService.getScriptProperties();
-  var model = p.getProperty('OPENAI_MODEL') || 'gpt-5-mini';
+  var model = p.getProperty('OPENAI_MODEL') || 'gpt-6-luna';
   var known = {};
   readAll_().forEach(function (o) { list_(o.tags).forEach(function (t) { if (!/^(ai-filled|notion-import)$/.test(t)) known[t] = 1; }); });
   var tags = Object.keys(known).sort();
@@ -381,12 +381,20 @@ function callModel_(key, cards) {
       type: 'object', additionalProperties: false, required: ['cards'],
       properties: { cards: { type: 'array', items: CARD_SCHEMA } } } } }
   };
-  if (/^(gpt-5|o\d)/.test(model)) body.reasoning = { effort: 'minimal' };  // definitions need no long reasoning; much faster
-  var res = UrlFetchApp.fetch('https://api.openai.com/v1/responses', {
-    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
-    headers: { Authorization: 'Bearer ' + key }, payload: JSON.stringify(body)
-  });
-  var code = res.getResponseCode(), j = JSON.parse(res.getContentText() || '{}');
+  // definitions need no long reasoning: lowest effort each model family accepts (much faster)
+  var effort = /^gpt-5(-mini|-nano)?$/.test(model) ? 'minimal' : /^(gpt-5\.|gpt-6)/.test(model) ? 'none' : /^o\d/.test(model) ? 'low' : '';
+  if (effort) body.reasoning = { effort: effort };
+  function send() {
+    return UrlFetchApp.fetch('https://api.openai.com/v1/responses', {
+      method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+      headers: { Authorization: 'Bearer ' + key }, payload: JSON.stringify(body)
+    });
+  }
+  var res = send(), code = res.getResponseCode(), j = JSON.parse(res.getContentText() || '{}');
+  if (code === 400 && body.reasoning && /reasoning/i.test(j.error && j.error.message || '')) {
+    delete body.reasoning;
+    res = send(); code = res.getResponseCode(); j = JSON.parse(res.getContentText() || '{}');
+  }
   if (code !== 200) throw new Error('OpenAI ' + code + ': ' + (j.error && j.error.message || '').slice(0, 160));
   var text = '';
   (j.output || []).forEach(function (o) {
