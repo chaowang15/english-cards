@@ -41,3 +41,30 @@ body::before{content:"";position:fixed;z-index:-1;inset:0;pointer-events:none;op
 .thmenu button.on::after{content:"✓";margin-left:auto;color:var(--acc)}
 .sw{display:inline-flex;width:28px;height:18px;border-radius:6px;overflow:hidden;border:1px solid var(--line);flex:none}
 .sw i{flex:1}
+
+/* home hero: word of the day on a deep accent panel, stats lightly tinted */
+.wod{border:0;color:#fff;
+ background:radial-gradient(70% 120% at 100% 0%,color-mix(in srgb,var(--acc2) 30%,transparent),transparent 60%),
+  linear-gradient(135deg,color-mix(in srgb,var(--acc) 92%,#000),color-mix(in srgb,var(--acc) 62%,#000))}
+[data-scheme=dark] .wod{color:var(--fg);
+ background:radial-gradient(70% 120% at 100% 0%,color-mix(in srgb,var(--acc2) 18%,transparent),transparent 60%),
+  linear-gradient(135deg,color-mix(in srgb,var(--acc) 34%,var(--card-solid)),color-mix(in srgb,var(--acc) 16%,var(--card-solid)))}
+.wod .eyebrow{color:color-mix(in srgb,#fff 75%,var(--acc2))}
+[data-scheme=dark] .wod .eyebrow{color:var(--acc2)}
+.wod .me,.wod .pron{color:rgba(255,255,255,.78)}
+[data-scheme=dark] .wod .me,[data-scheme=dark] .wod .pron{color:var(--mut)}
+.wod .pos{color:#fff;border-color:rgba(255,255,255,.45)}
+[data-scheme=dark] .wod .pos{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 45%,transparent)}
+.wod .say{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.28);color:#fff}
+.wod .say:hover{background:rgba(255,255,255,.22);color:#fff;border-color:#fff}
+.wod blockquote{background:rgba(255,255,255,.1);border-left-color:var(--acc2)}
+.wod .chip{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.22);color:inherit}
+.wod .btn{background:#fff;color:color-mix(in srgb,var(--acc) 85%,#000);box-shadow:0 6px 18px rgba(0,0,0,.18)}
+[data-scheme=dark] .wod .btn{background:var(--acc);color:var(--on-acc)}
+.wod .ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.4)}
+.wod .ghost:hover{border-color:#fff;color:#fff}
+[data-scheme=dark] .wod .ghost{color:var(--fg);border-color:var(--line)}
+.kpi{background:color-mix(in srgb,var(--acc) 8%,var(--card-solid));border-color:color-mix(in srgb,var(--acc) 18%,var(--line))}
+.kpi b{color:color-mix(in srgb,var(--acc) 85%,var(--fg))}
+.kpi.due b{color:var(--acc2)}
+[data-scheme=dark] .kpi{background:color-mix(in srgb,var(--acc) 10%,var(--card-solid))}
